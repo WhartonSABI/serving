@@ -57,7 +57,27 @@ subset_2024_f <- wimbledon_2024_female %>% # to make it easier for us to look th
 
 #-----------------------------------------------------------------------------------------------------
 
-## player rankings 2024
+## ELO rankings
+elo_rankings_2021 <- as.data.table(read.csv("../Rankings (1).csv"))
+names(elo_rankings_2021)
+elo_rankings_2021 <- elo_rankings_2021 %>% 
+  select(rank, name, points)
+
+# merge rankings_2024_m with subset_2024_m to get the rank of player1 and player2
+subset_2024_m <- subset_2024_m %>%
+  left_join(elo_rankings_2021, by = c("player1" = "name")) %>%
+  rename(player1_rank = rank, player1_pts = points) %>%
+  left_join(elo_rankings_2021, by = c("player2" = "name")) %>%
+  rename(player2_rank = rank, player2_pts = points)
+
+colSums(is.na(subset_2024_m))
+# make new dataset that contains rows where there are NAs
+subset_2024_m_na <- subset_2024_m %>%
+  filter(is.na(player1_rank) | is.na(player2_rank))
+
+#-----------------------------------------------------------------------------------------------------
+
+## ATP player rankings 2024
 rankings_2024_m <- as.data.table(read.csv("../male_2024_rankings.csv"))
 names(rankings_2024_m)
 
