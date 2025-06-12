@@ -65,14 +65,16 @@ names(rankings_2024_m)
 rankings_2024_m <- rankings_2024_m[, -1, with = FALSE]
 # rename columns
 setnames(rankings_2024_m, old = c("X.1", "Players", "Pts"), new = c("rank", "player", "pts"))
+# make player lowercase
+rankings_2024_m$player <- tolower(rankings_2024_m$player)
 
 # in subset_2024_m, make a new column for player1_name and player2_name that takes
 # the first initial of player1, followed by a . then a space, then followed by the last name of player 1.
 # same thing with player 2.
 
 subset_2024_m <- subset_2024_m %>%
-  mutate(player1_name = paste0(substr(player1, 1, 1), ". ", sub("^[^ ]+ ", "", player1)),
-         player2_name = paste0(substr(player2, 1, 1), ". ", sub("^[^ ]+ ", "", player2)))
+  mutate(player1_name = tolower(paste0(substr(player1, 1, 1), ". ", sub("^[^ ]+ ", "", player1))),
+         player2_name = tolower(paste0(substr(player2, 1, 1), ". ", sub("^[^ ]+ ", "", player2))))
 
 # merge rankings_2024_m with subset_2024_m to get the rank of player1 and player2
 subset_2024_m <- subset_2024_m %>%
@@ -87,17 +89,36 @@ colSums(is.na(subset_2024_m))
 subset_2024_m_na <- subset_2024_m %>%
   filter(is.na(player1_rank) | is.na(player2_rank))
 
+# in subset_2024_m, if player1 or player2 is in some vector of names we need to change,
+# then change player1_name and/or player2_name to the corresponding element in a second vector
+# vector of names to change
+names_to_change <- c("francisco comesana", "roberto carballes baena",
+                      "felix auger aliassime", "jan lennard struff",
+                      "roberto bautista agut")
+# corresponding vector of names to change to
+names_to_change_to <- c("f. comesaña", "r. carballés",
+                         "f. auger-aliassime", "j. struff", "r. bautista")
+# change player1_name and player2_name in subset_2024_m
+subset_2024_m_test <- subset_2024_m %>%
+  mutate(player1_name = ifelse(player1_name %in% names_to_change, 
+                               names_to_change_to[match(player1_name, names_to_change)], player1_name),
+         player2_name = ifelse(player2_name %in% names_to_change, 
+                               names_to_change_to[match(player2_name, names_to_change)], player2_name))
+colSums(is.na(subset_2024_m_test))
+subset_2024_m_na <- subset_2024_m_test %>%
+  filter(is.na(player1_rank) | is.na(player2_rank))
+
 ## pedro martinez, liam broady, elias ymer, Facundo Diaz Acosta aren't ranked?
 # Botic van De Zandschulp change to B. van de Zandschulp instead of B. van De Zandschulp
 # Francisco Comesana change to F. Comesaña instead of F. Comesana
 # Roberto Carballes Baena change to R. Carballés instead of R. Carballes Baena
 # Felix Auger Aliassime change to F. Auger-Aliassime instead of F. Auger Aliassime
-# Alex de Minaur change to De Minaur instead of A. de Minaur
+# Alex de Minaur change to A. De Minaur instead of A. de Minaur
 # Jan Lennard Struff change to J. Struff instead of J. Lennard Struff
 # Roberto Bautista Agut change to R. Bautista instead of R. Bautista Agut
 
-
 ## tldr: change to all lowercase, then go in and manually change everything else
+
 
 # write.csv(subset_2024_m, "../data/wimbledon_2024_m_rankings.csv", row.names = FALSE)
 #-----------------------------------------------------------------------------------------------------
