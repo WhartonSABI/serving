@@ -47,6 +47,59 @@ wimbledon_2024_female <- wimbledon_2024[14490:nrow(wimbledon_2024),]
 wimbledon_2024_male <- add_speed_ratio_column(wimbledon_2024_male)
 wimbledon_2024_female <- add_speed_ratio_column(wimbledon_2024_female)
 
+subset_2024_m <- wimbledon_2024_male %>% # to make it easier for us to look through relevant columns
+  select(match_id, slam, year, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, ServeWidth, ServeDepth, RallyCount, GameNo, P1DistanceRun,
+         P2DistanceRun, RallyCount, serving_player_won, speed_ratio)
+
+subset_2024_f <- wimbledon_2024_female %>% # to make it easier for us to look through relevant columns
+  select(match_id, slam, year, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, ServeWidth, ServeDepth, RallyCount, GameNo, P1DistanceRun,
+         P2DistanceRun, RallyCount, serving_player_won, speed_ratio)
+
+#-----------------------------------------------------------------------------------------------------
+
+## player rankings 2024
+rankings_2024_m <- as.data.table(read.csv("../male_2024_rankings.csv"))
+names(rankings_2024_m)
+
+# remove first column
+rankings_2024_m <- rankings_2024_m[, -1, with = FALSE]
+# rename columns
+setnames(rankings_2024_m, old = c("X.1", "Players", "Pts"), new = c("rank", "player", "pts"))
+
+# in subset_2024_m, make a new column for player1_name and player2_name that takes
+# the first initial of player1, followed by a . then a space, then followed by the last name of player 1.
+# same thing with player 2.
+
+subset_2024_m <- subset_2024_m %>%
+  mutate(player1_name = paste0(substr(player1, 1, 1), ". ", sub("^[^ ]+ ", "", player1)),
+         player2_name = paste0(substr(player2, 1, 1), ". ", sub("^[^ ]+ ", "", player2)))
+
+# merge rankings_2024_m with subset_2024_m to get the rank of player1 and player2
+subset_2024_m <- subset_2024_m %>%
+  left_join(rankings_2024_m, by = c("player1_name" = "player")) %>%
+  rename(player1_rank = rank, player1_pts = pts) %>%
+  left_join(rankings_2024_m, by = c("player2_name" = "player")) %>%
+  rename(player2_rank = rank, player2_pts = pts)
+
+# check for 0 or NAs in subset_2024_m
+colSums(is.na(subset_2024_m))
+# make new dataset that contains rows where there are NAs
+subset_2024_m_na <- subset_2024_m %>%
+  filter(is.na(player1_rank) | is.na(player2_rank))
+
+## pedro martinez, liam broady, elias ymer, Facundo Diaz Acosta aren't ranked?
+# Botic van De Zandschulp change to B. van de Zandschulp instead of B. van De Zandschulp
+# Francisco Comesana change to F. Comesaña instead of F. Comesana
+# Roberto Carballes Baena change to R. Carballés instead of R. Carballes Baena
+# Felix Auger Aliassime change to F. Auger-Aliassime instead of F. Auger Aliassime
+# Alex de Minaur change to De Minaur instead of A. de Minaur
+# Jan Lennard Struff change to J. Struff instead of J. Lennard Struff
+# Roberto Bautista Agut change to R. Bautista instead of R. Bautista Agut
+
+
+## tldr: change to all lowercase, then go in and manually change everything else
+
+# write.csv(subset_2024_m, "../data/wimbledon_2024_m_rankings.csv", row.names = FALSE)
 #-----------------------------------------------------------------------------------------------------
 
 ## wimbledon 2022:
