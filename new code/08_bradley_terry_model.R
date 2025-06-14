@@ -77,16 +77,16 @@ summary(logit_model_2_f) ## p_server_beats_returner not significant, ElapsedSeco
 #-----------------------------------------------------------------------------------------------------
 
 # new models with just second serves
-subset_m <- subset_m[ServeNumber == 2]
-subset_f <- subset_f[ServeNumber == 2]
+subset_m_second <- subset_m[ServeNumber == 2]
+subset_f_second <- subset_f[ServeNumber == 2]
 
 ## logistic regression for serving_player_won vs. p_server_beats_returner
 logit_model_m <- glm(serving_player_won ~ p_server_beats_returner, 
-                     data = subset_m, family = "binomial")
+                     data = subset_m_second, family = "binomial")
 summary(logit_model_m) ## p_server_beats_returner significant ***
 
 logit_model_f <- glm(serving_player_won ~ p_server_beats_returner, 
-                     data = subset_f, family = "binomial")
+                     data = subset_f_second, family = "binomial")
 summary(logit_model_f) ## p_server_beats_returner not significant
 
 #-----------------------------------------------------------------------------------------------------
@@ -94,22 +94,22 @@ summary(logit_model_f) ## p_server_beats_returner not significant
 ## add covariates
 
 logit_model_2_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds, 
-                       data = subset_m, family = "binomial")
+                       data = subset_m_second, family = "binomial")
 summary(logit_model_2_m) ## p_server_beats_returner significant ***, ElapsedSeconds not significant
 
 logit_model_2_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds, 
-                       data = subset_f, family = "binomial")
+                       data = subset_f_second, family = "binomial")
 summary(logit_model_2_f) ## p_server_beats_returner not significant, ElapsedSeconds not significant
 
 #-----------------------------------------------------------------------------------------------------
 
 ## add second serve speed ratio
 logit_model_3_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + speed_ratio, 
-                       data = subset_m, family = "binomial")
+                       data = subset_m_second, family = "binomial")
 summary(logit_model_3_m) ## p_server_beats_returner significant ***, ElapsedSeconds not significant, speed_ratio not significant
 
 logit_model_3_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + speed_ratio, 
-                       data = subset_f, family = "binomial")
+                       data = subset_f_second, family = "binomial")
 summary(logit_model_3_f) ## nothing significant
 
 #-----------------------------------------------------------------------------------------------------
@@ -117,10 +117,10 @@ summary(logit_model_3_f) ## nothing significant
 ## add location of serve
 names(subset_m)
 logit_model_4_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
-                       data = subset_m, family = "binomial")
+                       data = subset_m_second, family = "binomial")
 summary(logit_model_4_m) ## p_server_beats_returner significant ***, everything else not significant
 logit_model_4_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + speed_ratio + factor(ServeWidth) + factor(ServeDepth),, 
-                       data = subset_f, family = "binomial")
+                       data = subset_f_second, family = "binomial")
 summary(logit_model_4_f) ## nothing significant
 
 
