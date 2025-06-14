@@ -48,7 +48,7 @@ ggplot(subset_f, aes(x = Speed_MPH)) +
   facet_wrap(~ ServeNumber) +
   geom_vline(data = mean_speeds_f, aes(xintercept = mean_speed), 
              color = "red", linetype = "dashed", size = 1) +
-  labs(title = "Distribution of Serve Speed (mph) by Serve Number (2021 Female)",
+  labs(title = "Distribution of Serve Speed (mph) by Serve Number (Females)",
        x = "Serve Speed (mph)",
        y = "Count") +
   theme_minimal()
