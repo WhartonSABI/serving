@@ -1,4 +1,4 @@
-# rm(list=ls())
+rm(list=ls())
 # install.packages("welo")
 library(welo)
 library(tidyverse)
@@ -47,11 +47,11 @@ wimbledon_2024_female <- add_speed_ratio_column(wimbledon_2024_female)
 
 subset_2024_m <- wimbledon_2024_male %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, ServeWidth, ServeDepth, RallyCount, GameNo, P1DistanceRun,
-         P2DistanceRun, RallyCount, serving_player_won, speed_ratio)
+         P2DistanceRun, RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, SetNo, P1GamesWon, P2GamesWon)
 
 subset_2024_f <- wimbledon_2024_female %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, ServeWidth, ServeDepth, RallyCount, GameNo, P1DistanceRun,
-         P2DistanceRun, RallyCount, serving_player_won, speed_ratio)
+         P2DistanceRun, RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, SetNo, P1GamesWon, P2GamesWon)
 
 # add new column for player1_name being last name (which includes every word in player1 except for 
 # the first word) followed by their first initial, then a period.
@@ -86,8 +86,27 @@ subset_2024_f <- subset_2024_f %>%
 
 #-----------------------------------------------------------------------------------------------------
 
-### welo 2024 data
+## importance metric
+subset_2024_m <- subset_2024_m %>%
+  mutate(
+    Break_Point_Multiplier = ifelse(P1BreakPoint == 1 | P2BreakPoint == 1, 3.0, 1.0),
+    Late_Set_Multiplier = ifelse(pmax(P1GamesWon, P2GamesWon) >= 5, 1.8, 1.0),
+    Set_Progression_Multiplier = 1 + 0.4 * (SetNo - 1),
+    Importance = Break_Point_Multiplier * Late_Set_Multiplier * Set_Progression_Multiplier
+  )
 
+subset_2024_f <- subset_2024_f %>%
+  mutate(
+    Break_Point_Multiplier = ifelse(P1BreakPoint == 1 | P2BreakPoint == 1, 3.0, 1.0),
+    Late_Set_Multiplier = ifelse(pmax(P1GamesWon, P2GamesWon) >= 5, 1.8, 1.0),
+    Set_Progression_Multiplier = 1 + 0.4 * (SetNo - 1),
+    Importance = Break_Point_Multiplier * Late_Set_Multiplier * Set_Progression_Multiplier
+  )
+
+#-----------------------------------------------------------------------------------------------------
+
+### welo 2024 data
+library(welo)
 ## males welo
 atp_2024 <- tennis_data("2024", "ATP") # ATP = men's, WTA = women's
 atp_2024_clean <- clean(atp_2024)
