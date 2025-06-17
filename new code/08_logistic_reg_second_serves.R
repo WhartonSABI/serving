@@ -14,10 +14,6 @@ names(subset_m)
 
 #-----------------------------------------------------------------------------------------------------
 
-## TODO: create new column for state of game (based on P1Score and P2Score). then, add score importance metric.
-
-#-----------------------------------------------------------------------------------------------------
-
 # # Convert ELO to logistic (Bradley-Terry scale)
 # subset_m[, welo_p1_bt := 0.0057565 * player1_avg_welo]
 # subset_m[, welo_p2_bt := 0.0057565 * player2_avg_welo]
