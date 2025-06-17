@@ -12,6 +12,15 @@ subset_f <- as.data.table(read.csv("../data/wimbledon_subset_f.csv"))
 
 names(subset_m)
 
+subset_m <- subset_m %>%
+  filter(ServeDepth != "", ServeWidth != "")
+
+subset_f <- subset_f %>%
+  filter(ServeDepth != "", ServeWidth != "")
+
+unique_servedepth <- unique(c(subset_f$ServeDepth)) 
+unique_servewidth <- unique(c(subset_f$ServeWidth))
+
 #-----------------------------------------------------------------------------------------------------
 
 # # Convert ELO to logistic (Bradley-Terry scale)
@@ -125,11 +134,10 @@ summary(logit_model_4_f) ## nothing significant
 #-----------------------------------------------------------------------------------------------------
 
 ## add location of serve
-## add intercept b/c location of serve is categorical
-logit_model_5_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth) + 0, 
+logit_model_5_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_5_m) ## p_server_beats_returner significant *** (pos coef), each factor in ServeWidth significant (**, ***) (neg coefs) but not ServeDepth
-logit_model_5_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth) + 0, 
+summary(logit_model_5_m) ## p_server_beats_returner significant *** (pos coef), nothing else significant
+logit_model_5_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_f_second, family = "binomial")
 summary(logit_model_5_f) ## nothing significant
 
