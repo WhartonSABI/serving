@@ -60,7 +60,8 @@ ggplot(cor_melt, aes(x = Var1, y = Var2, fill = value)) +
   labs(x = "", y = "", title = "Correlation Matrix with Coefficients") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave("../images/male_corr_matrix.png")
+ggsave("../images/corr_matrix_male.png", bg = "white", 
+       width = 8, height = 6, units = "in")
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -100,7 +101,8 @@ ggplot(cor_melt, aes(x = Var1, y = Var2, fill = value)) +
   labs(x = "", y = "", title = "Correlation Matrix with Coefficients") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave("../images/corr_matrix_female.png")
+ggsave("../images/corr_matrix_female.png", bg = "white", 
+       width = 8, height = 6, units = "in")
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -121,7 +123,8 @@ ggplot(subset_m, aes(x = Speed_MPH)) +
        y = "Count") +
   theme_minimal()
 # save graph
-ggsave("../images/serve_speed_males.png")
+ggsave("../images/serve_speed_males.png", bg = "white", 
+       width = 8, height = 6, units = "in")
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -141,8 +144,8 @@ ggplot(subset_f, aes(x = Speed_MPH)) +
        x = "Serve Speed (mph)",
        y = "Count") +
   theme_minimal()
-ggsave("../images/serve_speed_females.png")
-
+ggsave("../images/serve_speed_females.png", bg = "white", 
+       width = 8, height = 6, units = "in")
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -153,7 +156,8 @@ ggplot(subset_m, aes(x = Speed_MPH, y = serving_player_won)) +
   geom_density2d_filled(alpha = 0.8) +
   labs(title = "Serve Speed vs. Win Outcome (Males, All Serves)") +
   theme_minimal()
-ggsave("../images/serve_speed_vs_win_males_all.png")
+ggsave("../images/serve_speed_vs_win_males_all.png", bg = "white", 
+       width = 8, height = 6, units = "in")
 
 ggplot(subset_m, aes(x = Speed_MPH, y = serving_player_won)) +
   geom_point() +
@@ -174,7 +178,9 @@ ggplot(first_serves, aes(x = Speed_MPH, y = serving_player_won)) +
   geom_density2d_filled(alpha = 0.8) +
   labs(title = "Serve Speed vs. Win Outcome for First Serves (Males, First Serves)") +
   theme_minimal()
-ggsave("../images/serve_speed_vs_win_males_first.png")
+ggsave("../images/serve_speed_vs_win_males_first.png", bg = "white", 
+       width = 8, height = 6, units = "in")
+
 
 second_serves <- subset_m %>% 
   filter(ServeNumber == 2)
@@ -188,7 +194,7 @@ ggplot(second_serves, aes(x = Speed_MPH, y = serving_player_won)) +
   geom_density2d_filled(alpha = 0.8) +
   labs(title = "Serve Speed vs. Win Outcome for Second Serves (Males, Second Serves)") +
   theme_minimal()
-ggsave("../images/serve_speed_vs_win_males_second.png")
-
+ggsave("../images/serve_speed_vs_win_males_second.png", bg = "white", 
+       width = 8, height = 6, units = "in")
 ## serve speeds are all pretty much the same
 
