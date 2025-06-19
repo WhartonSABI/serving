@@ -240,14 +240,24 @@ subset_2021_f <- subset_2021_f %>%
 # make new column in subset_2024_m and subset_2024_f which transforms ElapsedTime into number of seconds elapsed
 
 subset_2021_m <- subset_2021_m %>%
-  mutate(ElapsedSeconds = as.numeric(
-    as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
-  ))
+  separate(ElapsedTime, into = c("h", "m", "s"), sep = ":", convert = TRUE) %>%
+  mutate(ElapsedSeconds = h * 3600 + m * 60 + s) %>%
+  select(-h, -m, -s)
 
 subset_2021_f <- subset_2021_f %>%
-  mutate(ElapsedSeconds = as.numeric(
-    as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
-  ))
+  separate(ElapsedTime, into = c("h", "m", "s"), sep = ":", convert = TRUE) %>%
+  mutate(ElapsedSeconds = h * 3600 + m * 60 + s) %>%
+  select(-h, -m, -s)
+
+# subset_2021_m <- subset_2021_m %>%
+#   mutate(ElapsedSeconds = as.numeric(
+#     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
+#   ))
+# 
+# subset_2021_f <- subset_2021_f %>%
+#   mutate(ElapsedSeconds = as.numeric(
+#     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
+#   ))
 
 write.csv(subset_2021_m, "../data/wimbledon_subset_2021_m.csv", row.names = FALSE)
 write.csv(subset_2021_f, "../data/wimbledon_subset_2021_f.csv", row.names = FALSE)

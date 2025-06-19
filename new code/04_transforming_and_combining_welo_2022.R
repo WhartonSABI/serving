@@ -240,14 +240,24 @@ subset_2022_f <- subset_2022_f %>%
 # make new column in subset_2024_m and subset_2024_f which transforms ElapsedTime into number of seconds elapsed
 
 subset_2022_m <- subset_2022_m %>%
-  mutate(ElapsedSeconds = as.numeric(
-    as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
-  ))
+  separate(ElapsedTime, into = c("h", "m", "s"), sep = ":", convert = TRUE) %>%
+  mutate(ElapsedSeconds = h * 3600 + m * 60 + s) %>%
+  select(-h, -m, -s)
 
 subset_2022_f <- subset_2022_f %>%
-  mutate(ElapsedSeconds = as.numeric(
-    as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
-  ))
+  separate(ElapsedTime, into = c("h", "m", "s"), sep = ":", convert = TRUE) %>%
+  mutate(ElapsedSeconds = h * 3600 + m * 60 + s) %>%
+  select(-h, -m, -s)
+
+# subset_2022_m <- subset_2022_m %>%
+#   mutate(ElapsedSeconds = as.numeric(
+#     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
+#   ))
+# 
+# subset_2022_f <- subset_2022_f %>%
+#   mutate(ElapsedSeconds = as.numeric(
+#     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
+#   ))
 
 write.csv(subset_2022_m, "../data/wimbledon_subset_2022_m.csv", row.names = FALSE)
 write.csv(subset_2022_f, "../data/wimbledon_subset_2022_f.csv", row.names = FALSE)
@@ -255,3 +265,4 @@ write.csv(subset_2022_f, "../data/wimbledon_subset_2022_f.csv", row.names = FALS
 #-----------------------------------------------------------------------------------------------------
 
 ## i believe these two should be all set for EDA now
+

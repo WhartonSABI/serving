@@ -28,6 +28,9 @@ subset_m <- rbindlist(list(
   subset_2024_m
 ))
 
+subset_m <- subset_m %>%
+  filter(ServeDepth != "", ServeWidth != "")
+
 write.csv(subset_m, "../data/wimbledon_subset_m.csv")
 
 # combine male data
@@ -37,6 +40,9 @@ subset_f <- rbindlist(list(
   subset_2023_f,
   subset_2024_f
 ))
+
+subset_f <- subset_f %>%
+  filter(ServeDepth != "", ServeWidth != "")
 
 write.csv(subset_f, "../data/wimbledon_subset_f.csv")
 
