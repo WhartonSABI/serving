@@ -24,7 +24,6 @@ names(subset_m)
 #                                            1 / (1 + exp(welo_p1_bt - welo_p2_bt)),
 #                                            1 / (1 + exp(welo_p2_bt - welo_p1_bt))))
 # 
-# # rename column in subset_m
 # setnames(subset_m, old = c("... <- NULL"),
 #          new = c("p_server_beats_returner"))
 # 
@@ -49,29 +48,6 @@ names(subset_m)
 # write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
 
 # -----------------------------------------------------------------------------------------------------
-
-## logistic regression for serving_player_won vs. p_server_beats_returner
-logit_model_m <- glm(serving_player_won ~ p_server_beats_returner + 0, 
-                     data = subset_m, family = "binomial")
-summary(logit_model_m) ## not significant
-
-logit_model_f <- glm(serving_player_won ~ p_server_beats_returner + 0, 
-                     data = subset_f, family = "binomial")
-summary(logit_model_f) ## not significant
-
-#-----------------------------------------------------------------------------------------------------
-
-## add covariates
-
-logit_model_2_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + 0, 
-                     data = subset_m, family = "binomial")
-summary(logit_model_2_m) ## not significant
-
-logit_model_2_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + 0, 
-                     data = subset_f, family = "binomial")
-summary(logit_model_2_f) ## only elapsedseconds significant * (neg coef)
-
-#-----------------------------------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------------------------------
 
