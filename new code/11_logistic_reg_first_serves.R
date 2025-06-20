@@ -71,7 +71,7 @@ summary(logit_model_f) ## not significant
 
 logit_model_2_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed, 
                        data = subset_m_first, family = "binomial")
-summary(logit_model_2_m) ## p_server_beats_returner significant *** (neg coef), ElapsedSeconds not significant
+summary(logit_model_2_m) ## p_server_beats_returner significant *** (pos coef), ElapsedSeconds not significant
 
 logit_model_2_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed, 
                        data = subset_f_first, family = "binomial")
@@ -82,7 +82,7 @@ summary(logit_model_2_f) ## neither significant
 ## add second serve speed ratio
 logit_model_3_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio, 
                        data = subset_m_first, family = "binomial")
-summary(logit_model_3_m) ## p_server_beats_returner significant *** (neg coef), nothing else significant
+summary(logit_model_3_m) ## p_server_beats_returner significant *** (pos coef), nothing else significant
 
 logit_model_3_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio, 
                        data = subset_f_first, family = "binomial")
@@ -93,7 +93,7 @@ summary(logit_model_3_f) ## p_server_beats_returner and ElapsedSeconds not signi
 ## add score importance
 logit_model_4_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio + importance, 
                        data = subset_m_first, family = "binomial")
-summary(logit_model_4_m) ## p_server_beats_returner significant *** (neg coef), nothing else significant
+summary(logit_model_4_m) ## p_server_beats_returner significant *** (pos coef), nothing else significant
 
 logit_model_4_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio + importance,  
                        data = subset_f_first, family = "binomial")
@@ -104,7 +104,7 @@ summary(logit_model_4_f) ## p_server_beats_returner and ElapsedSeconds not signi
 ## add location of serve
 logit_model_5_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_m_first, family = "binomial")
-summary(logit_model_5_m) ## p_server_beats_returner significant *** (neg coef), nothing else significant
+summary(logit_model_5_m) ## p_server_beats_returner significant *** (pos coef), nothing else significant
 logit_model_5_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_f_first, family = "binomial")
 summary(logit_model_5_f) ## servewidth BW and C significant (*, **) with neg coefs, but nothing else significant
