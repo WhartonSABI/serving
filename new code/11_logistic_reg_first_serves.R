@@ -21,8 +21,8 @@ names(subset_m)
 # ## male
 # subset_m <- subset_m %>%
 #   mutate(p_server_beats_returner <- ifelse(PointServer == 1,
-#                                            1 / (1 + exp(welo_p1_bt - welo_p2_bt)),
-#                                            1 / (1 + exp(welo_p2_bt - welo_p1_bt))))
+#                                            1 / (1 + exp(welo_p2_bt - welo_p1_bt)),
+#                                            1 / (1 + exp(welo_p1_bt - welo_p2_bt))))
 # 
 # # rename column in subset_m
 # setnames(subset_m, old = c("... <- NULL"),
