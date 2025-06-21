@@ -38,10 +38,6 @@ add_speed_ratio_column <- function(data) {
 wimbledon_2024 <- as.data.table(read.csv("../data/wimbledon_2024_combined.csv"))
 names(wimbledon_2024)
 
-wimbledon_2024 <- wimbledon_2024 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-  mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
 #-----------------------------------------------------------------------------------------------------
 
 ## TODO: add "state" column (server_score - returner_score), then importance of that score from "../data/score_importance_dtmc.csv"

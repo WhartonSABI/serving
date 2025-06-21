@@ -4,6 +4,8 @@ library(welo)
 library(tidyverse)
 library(data.table)
 library(ggplot2)
+library(car)
+library(splines)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -109,7 +111,131 @@ logit_model_5_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSec
                        data = subset_f_first, family = "binomial")
 summary(logit_model_5_f) ## servewidth BW and C significant (*, **) with neg coefs, but nothing else significant
 
+vif(logit_model_5_m)
+vif(logit_model_5_f)
+
 #-----------------------------------------------------------------------------------------------------
+
+## use serve speed instead of serve ratio
+
+logit_model_6_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + Speed_MPH + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_m_first, family = "binomial")
+summary(logit_model_6_m) ## p_server_beats_returner significant *** (pos coef), Speed_MPH significant (neg coef)
+logit_model_6_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + Speed_MPH + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_f_first, family = "binomial")
+summary(logit_model_6_f) ## servewidth BW and C significant (*, *) with neg coefs, but nothing else significant
+
+logit_model_7_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + Speed_MPH + I(Speed_MPH**2) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_m_first, family = "binomial")
+summary(logit_model_7_m) ## p_server_beats_returner significant *** (pos coef), nothing else significant
+logit_model_7_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + Speed_MPH + I(Speed_MPH**2) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_f_first, family = "binomial")
+summary(logit_model_7_f) ## Speed_MPH * (pos coef), Speed_MPH^2 ** (neg coef), servewidth BW, C, and W **, * ,* (neg coefs)
+
+logit_model_8_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + splines::bs(Speed_MPH, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_m_first, family = "binomial")
+summary(logit_model_8_m) ## p_server_beats_returner significant *** (pos coef), nothing else significant
+logit_model_8_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + splines::bs(Speed_MPH, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_f_first, family = "binomial")
+summary(logit_model_8_f) ## splines::bs(Speed_MPH, degree = 3, df = 5)5 ** (neg coef), servewidth BW, C, W **, *, * (neg coefs)
+
+#-----------------------------------------------------------------------------------------------------
+
+## graph proportion of points won vs. speed_mph
+# Step 1: Bin Speed_MPH into intervals (e.g., 5 mph bins)
+binned_data <- subset_f_first %>%
+  filter(!is.na(Speed_MPH)) %>%
+  mutate(speed_bin = cut(Speed_MPH, breaks = seq(floor(min(Speed_MPH)),
+                                                 ceiling(max(Speed_MPH)),
+                                                 by = 5))) %>%
+  group_by(speed_bin) %>%
+  summarise(
+    avg_speed = mean(Speed_MPH, na.rm = TRUE),
+    win_rate = mean(serving_player_won == 1, na.rm = TRUE),
+    n = n()
+  )
+
+# Step 2: Plot
+ggplot(binned_data, aes(x = avg_speed, y = win_rate)) +
+  geom_point(size = 2) +
+  geom_line() +
+  labs(
+    title = "Empirical Win Rate vs. First Serve Speed (Females)",
+    x = "Serve Speed (MPH)",
+    y = "Proportion of Points Won"
+  ) +
+  theme_minimal()
+ggsave("../images/female_first_serve_vs_win.png", bg = "white", 
+       width = 8, height = 6, units = "in")
+
+## males
+# Step 1: Bin Speed_MPH into intervals (e.g., 5 mph bins)
+binned_data <- subset_m_first %>%
+  filter(!is.na(Speed_MPH)) %>%
+  mutate(speed_bin = cut(Speed_MPH, breaks = seq(floor(min(Speed_MPH)),
+                                                 ceiling(max(Speed_MPH)),
+                                                 by = 5))) %>%
+  group_by(speed_bin) %>%
+  summarise(
+    avg_speed = mean(Speed_MPH, na.rm = TRUE),
+    win_rate = mean(serving_player_won == 1, na.rm = TRUE),
+    n = n()
+  )
+
+# Step 2: Plot
+ggplot(binned_data, aes(x = avg_speed, y = win_rate)) +
+  geom_point(size = 2) +
+  geom_line() +
+  labs(
+    title = "Empirical Win Rate vs. First Serve Speed (Males)",
+    x = "Serve Speed (MPH)",
+    y = "Proportion of Points Won"
+  ) +
+  theme_minimal()
+ggsave("../images/male_first_serve_vs_win.png", bg = "white", 
+       width = 8, height = 6, units = "in")
+
+#-----------------------------------------------------------------------------------------------------
+
+## graph splines
+speed_vals <- seq(min(subset_f_first$Speed_MPH, na.rm = TRUE),
+                  max(subset_f_first$Speed_MPH, na.rm = TRUE),
+                  length.out = 200)
+
+predict_df <- data.frame(
+  Speed_MPH = speed_vals,
+  p_server_beats_returner = mean(subset_f_first$p_server_beats_returner, na.rm = TRUE),
+  ElapsedSeconds_fixed = mean(subset_f_first$ElapsedSeconds_fixed, na.rm = TRUE),
+  importance = mean(subset_f_first$importance, na.rm = TRUE),
+  ServeWidth = "BC",  # choose a representative category
+  ServeDepth = "NCTL" # choose a representative category
+)
+
+# Predict probabilities
+predict_df$prob_win <- predict(logit_model_8_f, newdata = predict_df, type = "response")
+
+# Plot
+ggplot(predict_df, aes(x = Speed_MPH, y = prob_win)) +
+  geom_line(size = 1.2, color = "blue") +
+  labs(title = "Effect of Serve Speed on Probability of Winning Point",
+       x = "Serve Speed (MPH)",
+       y = "Predicted Probability") +
+  theme_minimal()
+
+# Basis matrix for cubic spline
+basis_mat <- as.data.frame(splines::bs(speed_vals, degree = 3, df = 5))
+colnames(basis_mat) <- paste0("bs", 1:5)
+basis_mat$Speed_MPH <- speed_vals
+
+basis_long <- pivot_longer(basis_mat, cols = starts_with("bs"), names_to = "basis", values_to = "value")
+
+ggplot(basis_long, aes(x = Speed_MPH, y = value, color = basis)) +
+  geom_line(size = 1) +
+  labs(title = "Cubic Spline Basis Functions for Speed_MPH",
+       y = "Basis Function Value") +
+  theme_minimal()
+ggsave("../images/female_cubic_spline.png", bg = "white", 
+       width = 8, height = 6, units = "in")
 
 #-----------------------------------------------------------------------------------------------------
 

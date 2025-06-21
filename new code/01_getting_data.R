@@ -30,13 +30,6 @@ wimbledon_2011 <- left_join(wimbledon_2011_points, wimbledon_2011_matches, by = 
 names(wimbledon_2011)
 colSums(is.na(wimbledon_2011))
 
-## ServeNumber not in this data
-# # binary variable: whether serving player won or lost
-# wimbledon_2016 <- wimbledon_2016 %>%
-#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-#   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
-
 write.csv(wimbledon_2011, "../data/wimbledon_2011_combined.csv", row.names = FALSE)
 
 
@@ -62,13 +55,6 @@ names(wimbledon_2012_points)
 wimbledon_2012 <- left_join(wimbledon_2012_points, wimbledon_2012_matches, by = "match_id")
 names(wimbledon_2012)
 colSums(is.na(wimbledon_2012))
-
-## ServeNumber not in this data
-# # binary variable: whether serving player won or lost
-# wimbledon_2016 <- wimbledon_2016 %>%
-#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-#   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
 
 write.csv(wimbledon_2012, "../data/wimbledon_2012_combined.csv", row.names = FALSE)
 
@@ -96,13 +82,6 @@ wimbledon_2013 <- left_join(wimbledon_2013_points, wimbledon_2013_matches, by = 
 names(wimbledon_2013)
 colSums(is.na(wimbledon_2013))
 
-## ServeNumber not in this data
-# # binary variable: whether serving player won or lost
-# wimbledon_2016 <- wimbledon_2016 %>%
-#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-#   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
-
 write.csv(wimbledon_2013, "../data/wimbledon_2013_combined.csv", row.names = FALSE)
 
 
@@ -128,12 +107,6 @@ names(wimbledon_2014_points)
 wimbledon_2014 <- left_join(wimbledon_2014_points, wimbledon_2014_matches, by = "match_id")
 names(wimbledon_2014)
 colSums(is.na(wimbledon_2014))
-
-## ServeNumber not in this data
-# # binary variable: whether serving player won or lost
-# wimbledon_2016 <- wimbledon_2016 %>%
-#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-#   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
 
 
 write.csv(wimbledon_2014, "../data/wimbledon_2014_combined.csv", row.names = FALSE)
@@ -165,13 +138,6 @@ wimbledon_2015 <- left_join(wimbledon_2015_points, wimbledon_2015_matches, by = 
 names(wimbledon_2015)
 colSums(is.na(wimbledon_2015))
 
-## ServeNumber not in this data
-# # binary variable: whether serving player won or lost
-# wimbledon_2016 <- wimbledon_2016 %>%
-#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-#   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
-
 write.csv(wimbledon_2015, "../data/wimbledon_2015_combined.csv", row.names = FALSE)
 
 
@@ -198,13 +164,6 @@ wimbledon_2016 <- left_join(wimbledon_2016_points, wimbledon_2016_matches, by = 
 names(wimbledon_2016)
 colSums(is.na(wimbledon_2016))
 
-## ServeNumber not in this data
-# # binary variable: whether serving player won or lost
-# wimbledon_2016 <- wimbledon_2016 %>%
-#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-#   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
-
 write.csv(wimbledon_2016, "../data/wimbledon_2016_combined.csv", row.names = FALSE)
 
 
@@ -231,13 +190,6 @@ wimbledon_2016 <- left_join(wimbledon_2016_points, wimbledon_2016_matches, by = 
 names(wimbledon_2016)
 colSums(is.na(wimbledon_2016))
 
-## ServeNumber not in this data
-# # binary variable: whether serving player won or lost
-# wimbledon_2016 <- wimbledon_2016 %>%
-#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-#   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
-
 write.csv(wimbledon_2016, "../data/wimbledon_2016_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
@@ -263,13 +215,6 @@ wimbledon_2017 <- left_join(wimbledon_2017_points, wimbledon_2017_matches, by = 
 names(wimbledon_2017)
 colSums(is.na(wimbledon_2017))
 
-## ServeNumber not in this data
-# # binary variable: whether serving player won or lost
-# wimbledon_2017 <- wimbledon_2017 %>%
-#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-#   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
-
 write.csv(wimbledon_2017, "../data/wimbledon_2017_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
@@ -294,12 +239,6 @@ names(wimbledon_2018_points)
 wimbledon_2018 <- left_join(wimbledon_2018_points, wimbledon_2018_matches, by = "match_id")
 names(wimbledon_2018)
 colSums(is.na(wimbledon_2018))
-
-# binary variable: whether serving player won or lost
-wimbledon_2018 <- wimbledon_2018 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-  mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
 
 write.csv(wimbledon_2018, "../data/wimbledon_2018_combined.csv", row.names = FALSE)
 
@@ -327,12 +266,6 @@ names(wimbledon_2019_points)
 wimbledon_2019 <- left_join(wimbledon_2019_points, wimbledon_2019_matches, by = "match_id")
 names(wimbledon_2019)
 colSums(is.na(wimbledon_2019))
-
-# binary variable: whether serving player won or lost
-wimbledon_2019 <- wimbledon_2019 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-  mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
 
 write.csv(wimbledon_2019, "../data/wimbledon_2019_combined.csv", row.names = FALSE)
 
@@ -364,7 +297,7 @@ colSums(is.na(wimbledon_2021))
 # binary variable: whether serving player won or lost
 wimbledon_2021 <- wimbledon_2021 %>%
   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-  mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
 write.csv(wimbledon_2021, "../data/wimbledon_2021_combined.csv", row.names = FALSE)
@@ -397,7 +330,7 @@ colSums(is.na(wimbledon_2022))
 # binary variable: whether serving player won or lost
 wimbledon_2022 <- wimbledon_2022 %>%
   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-  mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
 write.csv(wimbledon_2022, "../data/wimbledon_2022_combined.csv", row.names = FALSE)
@@ -430,7 +363,7 @@ colSums(is.na(wimbledon_2023))
 # binary variable: whether serving player won or lost
 wimbledon_2023 <- wimbledon_2023 %>%
   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-  mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
 write.csv(wimbledon_2023, "../data/wimbledon_2023_combined.csv", row.names = FALSE)
@@ -463,7 +396,7 @@ colSums(is.na(wimbledon_2024))
 # binary variable: whether serving player won or lost
 wimbledon_2024 <- wimbledon_2024 %>%
   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-  mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
 write.csv(wimbledon_2024, "../data/wimbledon_2024_combined.csv", row.names = FALSE)
