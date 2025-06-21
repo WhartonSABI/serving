@@ -34,10 +34,6 @@ add_speed_ratio_column <- function(data) {
 wimbledon_2023 <- as.data.table(read.csv("../data/wimbledon_2023_combined.csv"))
 names(wimbledon_2023)
 
-wimbledon_2023 <- wimbledon_2023 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
-  mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
-
 #-----------------------------------------------------------------------------------------------------
 
 wimbledon_2023 <- wimbledon_2023 %>% 
