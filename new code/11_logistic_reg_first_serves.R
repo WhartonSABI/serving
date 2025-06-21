@@ -217,10 +217,39 @@ predict_df$prob_win <- predict(logit_model_8_f, newdata = predict_df, type = "re
 # Plot
 ggplot(predict_df, aes(x = Speed_MPH, y = prob_win)) +
   geom_line(size = 1.2, color = "blue") +
-  labs(title = "Effect of Serve Speed on Probability of Winning Point",
+  labs(title = "Predicted Effect of First Serve Speed on Probability of Winning Point (Females)",
        x = "Serve Speed (MPH)",
        y = "Predicted Probability") +
   theme_minimal()
+ggsave("../images/female_first_serve_spline.png", bg = "white", 
+       width = 8, height = 6, units = "in")
+
+## graph splines for males
+speed_vals <- seq(min(subset_m_first$Speed_MPH, na.rm = TRUE),
+                  max(subset_m_first$Speed_MPH, na.rm = TRUE),
+                  length.out = 200)
+
+predict_df <- data.frame(
+  Speed_MPH = speed_vals,
+  p_server_beats_returner = mean(subset_m_first$p_server_beats_returner, na.rm = TRUE),
+  ElapsedSeconds_fixed = mean(subset_m_first$ElapsedSeconds_fixed, na.rm = TRUE),
+  importance = mean(subset_m_first$importance, na.rm = TRUE),
+  ServeWidth = "BC",  # choose a representative category
+  ServeDepth = "NCTL" # choose a representative category
+)
+
+# Predict probabilities
+predict_df$prob_win <- predict(logit_model_8_m, newdata = predict_df, type = "response")
+
+# Plot
+ggplot(predict_df, aes(x = Speed_MPH, y = prob_win)) +
+  geom_line(size = 1.2, color = "blue") +
+  labs(title = "Predicted Effect of First Serve Speed on Probability of Winning Point (Males)",
+       x = "Serve Speed (MPH)",
+       y = "Predicted Probability") +
+  theme_minimal()
+ggsave("../images/male_first_serve_spline.png", bg = "white", 
+       width = 8, height = 6, units = "in")
 
 # Basis matrix for cubic spline
 basis_mat <- as.data.frame(splines::bs(speed_vals, degree = 3, df = 5))
