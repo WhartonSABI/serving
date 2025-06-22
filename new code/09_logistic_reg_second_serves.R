@@ -140,59 +140,236 @@ summary(logit_model_8_f) # p_server_beats_returner significant *** (pos coef), i
 
 #-----------------------------------------------------------------------------------------------------
 
-## graph proportion of points won vs. speed_mph
-# Step 1: Bin Speed_MPH into intervals
-binned_data <- subset_f_second %>%
+# ## graph proportion of points won vs. speed_mph
+# # Step 1: Bin Speed_MPH into intervals
+# binned_data <- subset_f_second %>%
+#   filter(!is.na(Speed_MPH)) %>%
+#   mutate(speed_bin = cut(Speed_MPH, breaks = seq(floor(min(Speed_MPH)),
+#                                                  ceiling(max(Speed_MPH)),
+#                                                  by = 10))) %>%
+#   group_by(speed_bin) %>%
+#   summarise(
+#     avg_speed = mean(Speed_MPH, na.rm = TRUE),
+#     win_rate = mean(serving_player_won == 1, na.rm = TRUE),
+#     n = n()
+#   )
+# 
+# # Step 2: Plot
+# ggplot(binned_data, aes(x = avg_speed, y = win_rate)) +
+#   geom_point(size = 2) +
+#   geom_line() +
+#   labs(
+#     title = "Empirical Win Rate vs. Second Serve Speed (Females)",
+#     x = "Serve Speed (MPH)",
+#     y = "Proportion of Points Won"
+#   ) +
+#   theme_minimal()
+# ggsave("../images/female_second_serve_vs_win.png", bg = "white", 
+#        width = 8, height = 6, units = "in")
+# 
+# ## males
+# # Step 1: Bin Speed_MPH into intervals
+# binned_data <- subset_m_second %>%
+#   filter(!is.na(Speed_MPH)) %>%
+#   mutate(speed_bin = cut(Speed_MPH, breaks = seq(floor(min(Speed_MPH)),
+#                                                  ceiling(max(Speed_MPH)),
+#                                                  by = 10))) %>%
+#   group_by(speed_bin) %>%
+#   summarise(
+#     avg_speed = mean(Speed_MPH, na.rm = TRUE),
+#     win_rate = mean(serving_player_won == 1, na.rm = TRUE),
+#     n = n()
+#   )
+# 
+# # Step 2: Plot
+# ggplot(binned_data, aes(x = avg_speed, y = win_rate)) +
+#   geom_point(size = 2) +
+#   geom_line() +
+#   labs(
+#     title = "Empirical Win Rate vs. Second Serve Speed (Males)",
+#     x = "Serve Speed (MPH)",
+#     y = "Proportion of Points Won"
+#   ) +
+#   theme_minimal()
+# ggsave("../images/male_second_serve_vs_win.png", bg = "white", 
+#        width = 8, height = 6, units = "in")
+
+#-----------------------------------------------------------------------------------------------------
+
+# ## graph splines
+# speed_vals <- seq(min(subset_f_second$Speed_MPH, na.rm = TRUE),
+#                   max(subset_f_second$Speed_MPH, na.rm = TRUE),
+#                   length.out = 200)
+# 
+# predict_df <- data.frame(
+#   Speed_MPH = speed_vals,
+#   p_server_beats_returner = mean(subset_f_second$p_server_beats_returner, na.rm = TRUE),
+#   ElapsedSeconds_fixed = mean(subset_f_second$ElapsedSeconds_fixed, na.rm = TRUE),
+#   importance = mean(subset_f_second$importance, na.rm = TRUE),
+#   ServeWidth = "BC",  # choose a representative category
+#   ServeDepth = "NCTL" # choose a representative category
+# )
+# 
+# # Predict probabilities
+# predict_df$prob_win <- predict(logit_model_8_f, newdata = predict_df, type = "response")
+# 
+# # Plot
+# ggplot(predict_df, aes(x = Speed_MPH, y = prob_win)) +
+#   geom_line(size = 1.2, color = "blue") +
+#   labs(title = "Predicted Effect of Second Serve Speed on Probability of Winning Point (Females)",
+#        x = "Serve Speed (MPH)",
+#        y = "Predicted Probability") +
+#   theme_minimal()
+# ggsave("../images/female_second_serve_spline.png", bg = "white", 
+#        width = 8, height = 6, units = "in")
+# 
+# ## graph splines for males
+# speed_vals <- seq(min(subset_m_second$Speed_MPH, na.rm = TRUE),
+#                   max(subset_m_second$Speed_MPH, na.rm = TRUE),
+#                   length.out = 200)
+# 
+# predict_df <- data.frame(
+#   Speed_MPH = speed_vals,
+#   p_server_beats_returner = mean(subset_m_second$p_server_beats_returner, na.rm = TRUE),
+#   ElapsedSeconds_fixed = mean(subset_m_second$ElapsedSeconds_fixed, na.rm = TRUE),
+#   importance = mean(subset_m_second$importance, na.rm = TRUE),
+#   ServeWidth = "BC",  # choose a representative category
+#   ServeDepth = "NCTL" # choose a representative category
+# )
+# 
+# # Predict probabilities
+# predict_df$prob_win <- predict(logit_model_8_m, newdata = predict_df, type = "response")
+# 
+# # Plot
+# ggplot(predict_df, aes(x = Speed_MPH, y = prob_win)) +
+#   geom_line(size = 1.2, color = "blue") +
+#   labs(title = "Predicted Effect of Second Serve Speed on Probability of Winning Point (Males)",
+#        x = "Serve Speed (MPH)",
+#        y = "Predicted Probability") +
+#   theme_minimal()
+# ggsave("../images/male_second_serve_spline.png", bg = "white", 
+#        width = 8, height = 6, units = "in")
+# 
+# # Basis matrix for cubic spline
+# basis_mat <- as.data.frame(splines::bs(speed_vals, degree = 3, df = 5))
+# colnames(basis_mat) <- paste0("bs", 1:5)
+# basis_mat$Speed_MPH <- speed_vals
+# 
+# basis_long <- pivot_longer(basis_mat, cols = starts_with("bs"), names_to = "basis", values_to = "value")
+# 
+# ggplot(basis_long, aes(x = Speed_MPH, y = value, color = basis)) +
+#   geom_line(size = 1) +
+#   labs(title = "Cubic Spline Basis Functions for Speed_MPH",
+#        y = "Basis Function Value") +
+#   theme_minimal()
+# ggsave("../images/cubic_spline.png", bg = "white", 
+#        width = 8, height = 6, units = "in")
+
+#-----------------------------------------------------------------------------------------------------
+
+## graph splines using coefficients from model, and overlay with graphs of proportion of points won vs. binned speed_mph
+#--- STEP 1: Generate spline-only prediction from the model ---#
+speed_vals <- seq(min(subset_f_second$Speed_MPH, na.rm = TRUE),
+                  max(subset_f_second$Speed_MPH, na.rm = TRUE),
+                  length.out = 200)
+
+spline_basis <- as.data.frame(splines::bs(speed_vals, degree = 3, df = 5))
+colnames(spline_basis) <- paste0("bs", 1:5)
+spline_basis$Speed_MPH <- speed_vals
+
+spline_coefs <- coef(logit_model_8_f)[grep("bs\\(Speed_MPH", names(coef(logit_model_8_f)))]
+
+spline_lp <- as.matrix(spline_basis[, paste0("bs", 1:5)]) %*% spline_coefs
+spline_prob <- plogis(spline_lp)
+
+spline_df <- data.frame(
+  Speed_MPH = speed_vals,
+  Probability = spline_prob,
+  Source = "Spline Prediction"
+)
+
+#--- STEP 2: Empirical win rate ---#
+empirical_df <- subset_f_second %>%
   filter(!is.na(Speed_MPH)) %>%
   mutate(speed_bin = cut(Speed_MPH, breaks = seq(floor(min(Speed_MPH)),
                                                  ceiling(max(Speed_MPH)),
-                                                 by = 10))) %>%
+                                                 by = 5))) %>%
   group_by(speed_bin) %>%
   summarise(
-    avg_speed = mean(Speed_MPH, na.rm = TRUE),
-    win_rate = mean(serving_player_won == 1, na.rm = TRUE),
-    n = n()
-  )
+    Speed_MPH = mean(Speed_MPH, na.rm = TRUE),
+    Probability = mean(serving_player_won == 1, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(Source = "Empirical Win Rate")
 
-# Step 2: Plot
-ggplot(binned_data, aes(x = avg_speed, y = win_rate)) +
-  geom_point(size = 2) +
-  geom_line() +
+#--- STEP 3: Combine both for plotting ---#
+plot_df <- bind_rows(empirical_df, spline_df)
+
+#--- STEP 4: Plot ---#
+ggplot(plot_df, aes(x = Speed_MPH, y = Probability, color = Source)) +
+  geom_line(size = 1.2) +
   labs(
-    title = "Empirical Win Rate vs. Second Serve Speed (Females)",
-    x = "Serve Speed (MPH)",
-    y = "Proportion of Points Won"
+    title = "Spline-Based vs. Empirical Win Rate (Females, Second Serve)",
+    x = "Serve Speed (MPH) (binned every 5 MPH)",
+    y = "Probability Server Wins",
+    color = "Source"
   ) +
-  theme_minimal()
-ggsave("../images/female_second_serve_vs_win.png", bg = "white", 
-       width = 8, height = 6, units = "in")
+  theme_minimal() +
+  scale_color_manual(values = c("Empirical Win Rate" = "black", "Spline Prediction" = "red"))
+ggsave("../images/female_spline_second_speed.png", bg = "white", width = 8, height = 6, units = "in")
 
-## males
-# Step 1: Bin Speed_MPH into intervals
-binned_data <- subset_m_second %>%
+#-----------------------------------------------------------------------------------------------------
+
+## same thing but for males
+#--- STEP 1: Generate spline-only prediction from the model ---#
+speed_vals <- seq(min(subset_m_second$Speed_MPH, na.rm = TRUE),
+                  max(subset_m_second$Speed_MPH, na.rm = TRUE),
+                  length.out = 200)
+
+spline_basis <- as.data.frame(splines::bs(speed_vals, degree = 3, df = 5))
+colnames(spline_basis) <- paste0("bs", 1:5)
+spline_basis$Speed_MPH <- speed_vals
+
+spline_coefs <- coef(logit_model_8_m)[grep("bs\\(Speed_MPH", names(coef(logit_model_8_m)))]
+
+spline_lp <- as.matrix(spline_basis[, paste0("bs", 1:5)]) %*% spline_coefs
+spline_prob <- plogis(spline_lp)
+
+spline_df <- data.frame(
+  Speed_MPH = speed_vals,
+  Probability = spline_prob,
+  Source = "Spline Prediction"
+)
+
+#--- STEP 2: Empirical win rate ---#
+empirical_df <- subset_m_second %>%
   filter(!is.na(Speed_MPH)) %>%
   mutate(speed_bin = cut(Speed_MPH, breaks = seq(floor(min(Speed_MPH)),
                                                  ceiling(max(Speed_MPH)),
-                                                 by = 10))) %>%
+                                                 by = 5))) %>%
   group_by(speed_bin) %>%
   summarise(
-    avg_speed = mean(Speed_MPH, na.rm = TRUE),
-    win_rate = mean(serving_player_won == 1, na.rm = TRUE),
-    n = n()
-  )
+    Speed_MPH = mean(Speed_MPH, na.rm = TRUE),
+    Probability = mean(serving_player_won == 1, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(Source = "Empirical Win Rate")
 
-# Step 2: Plot
-ggplot(binned_data, aes(x = avg_speed, y = win_rate)) +
-  geom_point(size = 2) +
-  geom_line() +
+#--- STEP 3: Combine both for plotting ---#
+plot_df <- bind_rows(empirical_df, spline_df)
+
+#--- STEP 4: Plot ---#
+ggplot(plot_df, aes(x = Speed_MPH, y = Probability, color = Source)) +
+  geom_line(size = 1.2) +
   labs(
-    title = "Empirical Win Rate vs. Second Serve Speed (Males)",
-    x = "Serve Speed (MPH)",
-    y = "Proportion of Points Won"
+    title = "Spline-Based vs. Empirical Win Rate (Males, Second Serve)",
+    x = "Serve Speed (MPH) (binned every 5 MPH)",
+    y = "Probability Server Wins",
+    color = "Source"
   ) +
-  theme_minimal()
-ggsave("../images/male_second_serve_vs_win.png", bg = "white", 
-       width = 8, height = 6, units = "in")
+  theme_minimal() +
+  scale_color_manual(values = c("Empirical Win Rate" = "black", "Spline Prediction" = "red"))
+ggsave("../images/male_spline_second_speed.png", bg = "white", width = 8, height = 6, units = "in")
 
 #-----------------------------------------------------------------------------------------------------
 
