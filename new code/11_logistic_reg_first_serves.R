@@ -141,6 +141,23 @@ summary(logit_model_8_f) ## p_server_beats_returner *** (pos coef), importance *
 
 #-----------------------------------------------------------------------------------------------------
 
+## quadratic and spline on speed_ratio
+logit_model_9_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + I(speed_ratio**2) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_m_first, family = "binomial")
+summary(logit_model_9_m) ## p_server_beats_returner *** (pos coef), ElapsedSeconds_fixed * (neg coef), importance *** (pos coef), servewidth C and W *** (pos coef), servedepth NCTL *** (neg coef)
+logit_model_9_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + I(speed_ratio**2) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_f_first, family = "binomial")
+summary(logit_model_9_f) ## p_server_beats_returner *** (pos coef), importance *** (pos coef), servewidth BW, C, and W *, ***, *** (pos coefs), servedepth NCTL *** (neg coef)
+
+logit_model_10_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + splines::bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth), 
+                        data = subset_m_first, family = "binomial")
+summary(logit_model_10_m) ## p_server_beats_returner *** (pos coef), ElapsedSeconds_fixed * (neg coef), importance *** (pos coef), splines::bs(speed_ratio, degree = 3, df = 5)4 * (pos coef), servewidth C and W *** (pos coef), servedepth NCTL *** (neg coef)
+logit_model_10_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + splines::bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth), 
+                        data = subset_f_first, family = "binomial")
+summary(logit_model_10_f) ## p_server_beats_returner ** (pos coef), importance *** (pos coef), servewidth BW, C, and W *, ***, *** (pos coefs), servedepth NCTL *** (neg coef)
+
+#-----------------------------------------------------------------------------------------------------
+
 # ## graph proportion of points won vs. speed_mph
 # # Step 1: Bin Speed_MPH into intervals (e.g., 5 mph bins)
 # binned_data <- subset_f_first %>%
@@ -496,6 +513,132 @@ ggplot(plot_df, aes(x = Speed_MPH, y = Probability, color = Source)) +
   theme_minimal() +
 scale_color_manual(values = c("Empirical Win Rate" = "black", "Quadratic Prediction" = "red"))
 ggsave("../images/male_quadratic_first_speed.png", bg = "white", width = 8, height = 6, units = "in")
+
+#-----------------------------------------------------------------------------------------------------
+
+## quadratic for speed_ratio
+#--- STEP 1: Get coefficients from model ---#
+coefs <- coef(logit_model_9_f)
+
+# Extract relevant coefficients
+intercept <- coefs["(Intercept)"]
+beta_speed <- coefs["speed_ratio"]
+beta_speed2 <- coefs["I(speed_ratio^2)"]
+
+# To isolate the effect of Speed_MPH only, set other covariates to typical values
+fixed_lp <- intercept +
+  coefs["p_server_beats_returner"] * mean(subset_f_first$p_server_beats_returner, na.rm = TRUE) +
+  coefs["ElapsedSeconds_fixed"] * mean(subset_f_first$ElapsedSeconds_fixed, na.rm = TRUE) +
+  coefs["importance"] * mean(subset_f_first$importance, na.rm = TRUE) +
+  coefs["factor(ServeWidth)BC"] * 1 +  # set one-hot encoding for baseline category
+  coefs["factor(ServeDepth)NCTL"] * 1 # assume typical depth
+
+#--- STEP 2: Create grid of Speed_MPH values and compute prediction ---#
+speed_vals <- seq(min(subset_f_first$speed_ratio, na.rm = TRUE),
+                  max(subset_f_first$speed_ratio, na.rm = TRUE),
+                  length.out = 200)
+
+quad_lp <- fixed_lp + beta_speed * speed_vals + beta_speed2 * speed_vals^2
+predicted_probs <- plogis(quad_lp)
+
+quad_df <- data.frame(
+  speed_ratio = speed_vals,
+  Probability = predicted_probs,
+  Source = "Quadratic Prediction"
+)
+
+#--- STEP 3: Empirical binned win rate ---#
+empirical_df <- subset_f_first %>%
+  filter(!is.na(speed_ratio)) %>%
+  mutate(speed_bin = cut(speed_ratio, breaks = seq(floor(min(speed_ratio)),
+                                                   ceiling(max(speed_ratio)),
+                                                   by = 0.025))) %>%
+  group_by(speed_bin) %>%
+  summarise(
+    speed_ratio = mean(speed_ratio, na.rm = TRUE),
+    Probability = mean(serving_player_won == 1, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(Source = "Empirical Win Rate")
+
+#--- STEP 4: Combine and plot ---#
+plot_df <- bind_rows(empirical_df, quad_df)
+
+ggplot(plot_df, aes(x = speed_ratio, y = Probability, color = Source)) +
+  geom_line(size = 1.2) +
+  labs(
+    title = "Quadratic Prediction vs. Empirical Win Rate (Females, First Serve)",
+    x = "Speed Ratio (binned every 0.025 units)",
+    y = "Probability Server Wins",
+    color = "Source"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("Empirical Win Rate" = "black", "Quadratic Prediction" = "red"))
+ggsave("../images/female_quadratic_first_ratio.png", bg = "white", width = 8, height = 6, units = "in")
+
+#-----------------------------------------------------------------------------------------------------
+
+## same thing for males
+##--- STEP 1: Get coefficients from model ---#
+coefs <- coef(logit_model_9_m)
+
+# Extract relevant coefficients
+intercept <- coefs["(Intercept)"]
+beta_speed <- coefs["speed_ratio"]
+beta_speed2 <- coefs["I(speed_ratio^2)"]
+
+# To isolate the effect of Speed_MPH only, set other covariates to typical values
+fixed_lp <- intercept +
+  coefs["p_server_beats_returner"] * mean(subset_m_first$p_server_beats_returner, na.rm = TRUE) +
+  coefs["ElapsedSeconds_fixed"] * mean(subset_m_first$ElapsedSeconds_fixed, na.rm = TRUE) +
+  coefs["importance"] * mean(subset_m_first$importance, na.rm = TRUE) +
+  coefs["factor(ServeWidth)BC"] * 1 +  # set one-hot encoding for baseline category
+  coefs["factor(ServeDepth)NCTL"] * 1 # assume typical depth
+
+#--- STEP 2: Create grid of Speed_MPH values and compute prediction ---#
+speed_vals <- seq(min(subset_m_first$speed_ratio, na.rm = TRUE),
+                  max(subset_m_first$speed_ratio, na.rm = TRUE),
+                  length.out = 200)
+
+quad_lp <- fixed_lp + beta_speed * speed_vals + beta_speed2 * speed_vals^2
+predicted_probs <- plogis(quad_lp)
+
+quad_df <- data.frame(
+  speed_ratio = speed_vals,
+  Probability = predicted_probs,
+  Source = "Quadratic Prediction"
+)
+
+#--- STEP 3: Empirical binned win rate ---#
+empirical_df <- subset_m_first %>%
+  filter(!is.na(speed_ratio)) %>%
+  mutate(speed_bin = cut(speed_ratio, breaks = seq(floor(min(speed_ratio)),
+                                                   ceiling(max(speed_ratio)),
+                                                   by = 0.025))) %>%
+  group_by(speed_bin) %>%
+  summarise(
+    speed_ratio = mean(speed_ratio, na.rm = TRUE),
+    Probability = mean(serving_player_won == 1, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(Source = "Empirical Win Rate")
+
+#--- STEP 4: Combine and plot ---#
+plot_df <- bind_rows(empirical_df, quad_df)
+
+ggplot(plot_df, aes(x = speed_ratio, y = Probability, color = Source)) +
+  geom_line(size = 1.2) +
+  labs(
+    title = "Quadratic Prediction vs. Empirical Win Rate (Males, First Serve)",
+    x = "Speed Ratio (binned every 0.025 units)",
+    y = "Probability Server Wins",
+    color = "Source"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("Empirical Win Rate" = "black", "Quadratic Prediction" = "red"))
+ggsave("../images/male_quadratic_first_ratio.png", bg = "white", width = 8, height = 6, units = "in")
+#-----------------------------------------------------------------------------------------------------
+
 
 #-----------------------------------------------------------------------------------------------------
 

@@ -391,7 +391,130 @@ ggsave("../images/male_spline_second_speed.png", bg = "white", width = 8, height
 
 #-----------------------------------------------------------------------------------------------------
 
-## TODO: graph quadratic for speed_MPH. then, graph splines and quadratics for speed_ratio.
+## what we've haven't done: graph quadratic for speed_MPH, and graph splines for speed_ratio.
+
+## graph quadratic for speed_ratio using coefficients from model, and overlay with graphs of proportion of points won vs. binned speed_ratio
+#--- STEP 1: Get coefficients from model ---#
+coefs <- coef(logit_model_9_f)
+
+# Extract relevant coefficients
+intercept <- coefs["(Intercept)"]
+beta_speed <- coefs["speed_ratio"]
+beta_speed2 <- coefs["I(speed_ratio^2)"]
+
+# To isolate the effect of Speed_MPH only, set other covariates to typical values
+fixed_lp <- intercept +
+  coefs["p_server_beats_returner"] * mean(subset_f_second$p_server_beats_returner, na.rm = TRUE) +
+  coefs["ElapsedSeconds_fixed"] * mean(subset_f_second$ElapsedSeconds_fixed, na.rm = TRUE) +
+  coefs["importance"] * mean(subset_f_second$importance, na.rm = TRUE) +
+  coefs["factor(ServeWidth)BC"] * 1 +  # set one-hot encoding for baseline category
+  coefs["factor(ServeDepth)NCTL"] * 1 # assume typical depth
+
+#--- STEP 2: Create grid of Speed_MPH values and compute prediction ---#
+speed_vals <- seq(min(subset_f_second$speed_ratio, na.rm = TRUE),
+                  max(subset_f_second$speed_ratio, na.rm = TRUE),
+                  length.out = 200)
+
+quad_lp <- fixed_lp + beta_speed * speed_vals + beta_speed2 * speed_vals^2
+predicted_probs <- plogis(quad_lp)
+
+quad_df <- data.frame(
+  speed_ratio = speed_vals,
+  Probability = predicted_probs,
+  Source = "Quadratic Prediction"
+)
+
+#--- STEP 3: Empirical binned win rate ---#
+empirical_df <- subset_f_second %>%
+  filter(!is.na(speed_ratio)) %>%
+  mutate(speed_bin = cut(speed_ratio, breaks = seq(floor(min(speed_ratio)),
+                                                 ceiling(max(speed_ratio)),
+                                                 by = 0.025))) %>%
+  group_by(speed_bin) %>%
+  summarise(
+    speed_ratio = mean(speed_ratio, na.rm = TRUE),
+    Probability = mean(serving_player_won == 1, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(Source = "Empirical Win Rate")
+
+#--- STEP 4: Combine and plot ---#
+plot_df <- bind_rows(empirical_df, quad_df)
+
+ggplot(plot_df, aes(x = speed_ratio, y = Probability, color = Source)) +
+  geom_line(size = 1.2) +
+  labs(
+    title = "Quadratic Prediction vs. Empirical Win Rate (Females, Second Serve)",
+    x = "Speed Ratio (binned every 0.025 units)",
+    y = "Probability Server Wins",
+    color = "Source"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("Empirical Win Rate" = "black", "Quadratic Prediction" = "red"))
+ggsave("../images/female_quadratic_second_ratio.png", bg = "white", width = 8, height = 6, units = "in")
+
+#-----------------------------------------------------------------------------------------------------
+
+## same thing for males
+##--- STEP 1: Get coefficients from model ---#
+coefs <- coef(logit_model_9_m)
+
+# Extract relevant coefficients
+intercept <- coefs["(Intercept)"]
+beta_speed <- coefs["speed_ratio"]
+beta_speed2 <- coefs["I(speed_ratio^2)"]
+
+# To isolate the effect of Speed_MPH only, set other covariates to typical values
+fixed_lp <- intercept +
+  coefs["p_server_beats_returner"] * mean(subset_m_second$p_server_beats_returner, na.rm = TRUE) +
+  coefs["ElapsedSeconds_fixed"] * mean(subset_m_second$ElapsedSeconds_fixed, na.rm = TRUE) +
+  coefs["importance"] * mean(subset_m_second$importance, na.rm = TRUE) +
+  coefs["factor(ServeWidth)BC"] * 1 +  # set one-hot encoding for baseline category
+  coefs["factor(ServeDepth)NCTL"] * 1 # assume typical depth
+
+#--- STEP 2: Create grid of Speed_MPH values and compute prediction ---#
+speed_vals <- seq(min(subset_m_second$speed_ratio, na.rm = TRUE),
+                  max(subset_m_second$speed_ratio, na.rm = TRUE),
+                  length.out = 200)
+
+quad_lp <- fixed_lp + beta_speed * speed_vals + beta_speed2 * speed_vals^2
+predicted_probs <- plogis(quad_lp)
+
+quad_df <- data.frame(
+  speed_ratio = speed_vals,
+  Probability = predicted_probs,
+  Source = "Quadratic Prediction"
+)
+
+#--- STEP 3: Empirical binned win rate ---#
+empirical_df <- subset_m_second %>%
+  filter(!is.na(speed_ratio)) %>%
+  mutate(speed_bin = cut(speed_ratio, breaks = seq(floor(min(speed_ratio)),
+                                                   ceiling(max(speed_ratio)),
+                                                   by = 0.025))) %>%
+  group_by(speed_bin) %>%
+  summarise(
+    speed_ratio = mean(speed_ratio, na.rm = TRUE),
+    Probability = mean(serving_player_won == 1, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(Source = "Empirical Win Rate")
+
+#--- STEP 4: Combine and plot ---#
+plot_df <- bind_rows(empirical_df, quad_df)
+
+ggplot(plot_df, aes(x = speed_ratio, y = Probability, color = Source)) +
+  geom_line(size = 1.2) +
+  labs(
+    title = "Quadratic Prediction vs. Empirical Win Rate (Males, Second Serve)",
+    x = "Speed Ratio (binned every 0.025 units)",
+    y = "Probability Server Wins",
+    color = "Source"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("Empirical Win Rate" = "black", "Quadratic Prediction" = "red"))
+ggsave("../images/male_quadratic_first_second_ratio.png", bg = "white", width = 8, height = 6, units = "in")
+#-----------------------------------------------------------------------------------------------------
 
 
 
