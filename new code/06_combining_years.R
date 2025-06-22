@@ -33,7 +33,7 @@ subset_m <- subset_m %>%
 
 write.csv(subset_m, "../data/wimbledon_subset_m.csv")
 
-# combine male data
+# combine female data
 subset_f <- rbindlist(list(
   subset_2021_f,
   subset_2022_f,
