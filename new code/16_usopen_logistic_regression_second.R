@@ -130,3 +130,38 @@ for (model_name in us_model_names) {
   cat("==============================\n")
   print(summary(get(model_name)))
 }
+
+# --- Helper function to plot histograms of serve speed or ratio ---
+plot_histogram <- function(df, group_id, group_name, var) {
+  df <- df %>%
+    mutate(server = if_else(PointServer == 1, player1_name, player2_name))
+  
+  player_point_counts <- df %>% count(server, name = "n_points")
+  df <- left_join(df, player_point_counts, by = "server") %>%
+    mutate(weight = 1 / n_points)
+  
+  ggplot(df, aes_string(x = var)) +
+    geom_histogram(aes(weight = weight), bins = 30, fill = "skyblue", color = "black") +
+    labs(
+      title = paste("Distribution of", var, "—", group_name),
+      x = ifelse(var == "Speed_MPH", "Serve Speed (MPH)", "Serve Speed Ratio"),
+      y = "Weighted Count"
+    ) +
+    theme_minimal()
+  
+  ggsave(paste0("../images/us_", group_id, "_hist_", tolower(var), ".png"),
+         width = 8, height = 6, units = "in", bg = "white")
+}
+
+# --- Create histograms for all 4 subsets ---
+plot_histogram(m_first, "m_first", "Males First Serve", "Speed_MPH")
+plot_histogram(m_first, "m_first", "Males First Serve", "speed_ratio")
+
+plot_histogram(m_second, "m_second", "Males Second Serve", "Speed_MPH")
+plot_histogram(m_second, "m_second", "Males Second Serve", "speed_ratio")
+
+plot_histogram(f_first, "f_first", "Females First Serve", "Speed_MPH")
+plot_histogram(f_first, "f_first", "Females First Serve", "speed_ratio")
+
+plot_histogram(f_second, "f_second", "Females Second Serve", "Speed_MPH")
+plot_histogram(f_second, "f_second", "Females Second Serve", "speed_ratio")
