@@ -205,6 +205,8 @@ print(summary(f_second_spline_ratio_leq1))
 get_middle_90 <- function(df) {
   quantiles <- quantile(df$speed_ratio, probs = c(0.05, 0.95), na.rm = TRUE)
   df %>% filter(speed_ratio >= quantiles[1], speed_ratio <= quantiles[2])
+  quantiles <- quantile(df$Speed_MPH, probs = c(0.05, 0.95), na.rm = TRUE)
+  df %>% filter(Speed_MPH >= quantiles[1], Speed_MPH <= quantiles[2])
 }
 
 m_second_trimmed <- get_middle_90(m_second)
