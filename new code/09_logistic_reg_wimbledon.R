@@ -5,7 +5,7 @@ library(data.table)
 library(ggplot2)
 library(car)
 library(splines)
-# test
+library(dplyr)
 
 # --- Load data ---
 subset_m <- fread("../data/wimbledon_subset_m.csv")
@@ -99,7 +99,7 @@ run_spline_group <- function(df, group_id, group_name) {
                        bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
                      data = df, family = "binomial")
   
-  assign(paste0(group_id, "_spline_ratio"), model_ratio, envir = .GlobalEnv) 
+  assign(paste0(group_id, "_spline_ratio"), model_ratio, envir = .GlobalEnv)
   
   plot_spline_model(df, model_ratio, "speed_ratio",
                     title = paste("Spline vs. Empirical (Speed Ratio) —", group_name),
@@ -240,3 +240,153 @@ cat("\n==============================\n")
 cat("Model Summary: f_second_spline_ratio_trimmed\n")
 cat("==============================\n")
 print(summary(f_second_spline_ratio_trimmed))
+
+# --- more detailed analysis of second serves ---
+
+# For males:
+m_second <- subset_m %>% filter(ServeNumber == 2, !is.na(serving_player_won), !is.na(Speed_MPH))
+
+# Fit a smooth model
+model_m_second <- glm(serving_player_won ~ bs(Speed_MPH, degree = 3, df = 5),
+                      data = m_second, family = "binomial")
+
+# Predict win prob across a grid of speeds
+speed_vals_m <- seq(min(m_second$Speed_MPH, na.rm = TRUE),
+                    max(m_second$Speed_MPH, na.rm = TRUE), length.out = 200)
+
+spline_basis_m <- as.data.frame(bs(speed_vals_m, degree = 3, df = 5))
+
+# Make predictions
+pred_matrix_m <- model.matrix(~ bs(Speed_MPH, degree = 3, df = 5),
+                              data = data.frame(Speed_MPH = speed_vals_m))
+pred_probs_m <- plogis(pred_matrix_m %*% coef(model_m_second))
+
+# Find max win probability and corresponding speed
+max_index_m <- which.max(pred_probs_m)
+max_speed_m <- speed_vals_m[max_index_m]
+max_prob_m <- pred_probs_m[max_index_m]
+
+cat("Male second serves — speed with highest P(win):\n")
+cat("Speed (MPH):", round(max_speed_m, 2), "\n")
+cat("Predicted win probability:", round(max_prob_m, 4), "\n")
+
+# For females:
+f_second <- subset_f %>% filter(ServeNumber == 2, !is.na(serving_player_won), !is.na(Speed_MPH))
+
+model_f_second <- glm(serving_player_won ~ bs(Speed_MPH, degree = 3, df = 5),
+                      data = f_second, family = "binomial")
+
+speed_vals_f <- seq(min(f_second$Speed_MPH, na.rm = TRUE),
+                    max(f_second$Speed_MPH, na.rm = TRUE), length.out = 200)
+
+pred_matrix_f <- model.matrix(~ bs(Speed_MPH, degree = 3, df = 5),
+                              data = data.frame(Speed_MPH = speed_vals_f))
+pred_probs_f <- plogis(pred_matrix_f %*% coef(model_f_second))
+
+max_index_f <- which.max(pred_probs_f)
+max_speed_f <- speed_vals_f[max_index_f]
+max_prob_f <- pred_probs_f[max_index_f]
+
+cat("Female second serves — speed with highest P(win):\n")
+cat("Speed (MPH):", round(max_speed_f, 2), "\n")
+cat("Predicted win probability:", round(max_prob_f, 4), "\n")
+
+#PLOTS
+
+plot_win_prob_simple <- function(df,
+                                 title_text = "P(win) vs. Second-Serve Speed (MPH)",
+                                 save_path = NULL   # <- give a path or leave NULL
+) {
+  library(splines)
+  library(ggplot2)
+  library(dplyr)
+  
+  ## 1  Prep data ---------------------------------------------------------------
+  df <- df %>%
+    filter(ServeNumber == 2,
+           !is.na(serving_player_won),
+           !is.na(Speed_MPH)) %>%
+    as.data.frame()
+  
+  ## 2  Fit spline model --------------------------------------------------------
+  spline_mod <- glm(serving_player_won ~ bs(Speed_MPH, df = 5),
+                    data = df, family = "binomial")
+  
+  speed_grid  <- seq(min(df$Speed_MPH), max(df$Speed_MPH), length.out = 200)
+  design_mat  <- model.matrix(~ bs(Speed_MPH, df = 5),
+                              data = data.frame(Speed_MPH = speed_grid))
+  pred_probs  <- plogis(design_mat %*% coef(spline_mod))
+  
+  spline_df <- data.frame(
+    Speed       = speed_grid,
+    Probability = pred_probs,
+    Source      = "Spline Prediction"
+  )
+  max_point <- spline_df[which.max(spline_df$Probability), ]
+  
+  ## 3  Empirical bins ----------------------------------------------------------
+  empirical_df <- df %>%
+    mutate(speed_bin = cut(Speed_MPH,
+                           breaks = seq(floor(min(Speed_MPH)),
+                                        ceiling(max(Speed_MPH)),
+                                        by = 5))) %>%
+    group_by(speed_bin) %>%
+    summarise(
+      Speed       = mean(Speed_MPH, na.rm = TRUE),
+      Probability = mean(serving_player_won == 1, na.rm = TRUE),
+      .groups     = "drop"
+    ) %>%
+    mutate(Source = "Empirical Win Rate")
+  
+  ## 4  Combine for plotting ----------------------------------------------------
+  plot_df <- bind_rows(spline_df, empirical_df)
+  
+  p <- ggplot(plot_df, aes(x = Speed, y = Probability, colour = Source)) +
+    geom_line(data = subset(plot_df, Source == "Spline Prediction"),
+              size = 1.2) +
+    geom_point(data = subset(plot_df, Source == "Empirical Win Rate"),
+               size = 2) +
+    geom_point(data = max_point,
+               aes(x = Speed, y = Probability),
+               colour = "blue", shape = 17, size = 3, show.legend = FALSE) +
+    geom_text(data = max_point,
+              aes(label = paste0("Max: ", round(Speed, 1), " MPH")),
+              vjust = -1.2, colour = "blue", fontface = "bold",
+              show.legend = FALSE) +
+    labs(
+      title = title_text,
+      x     = "Second-Serve Speed (MPH)",
+      y     = "P(Server Wins Point)",
+      colour = NULL      # nicer legend title
+    ) +
+    scale_colour_manual(values = c("Empirical Win Rate"  = "black",
+                                   "Spline Prediction"    = "red")) +
+    theme_minimal()
+  
+  ## 5  Save if asked -----------------------------------------------------------
+  if (!is.null(save_path)) {
+    ggsave(filename = save_path, plot = p,
+           width = 8, height = 6, units = "in", bg = "white")
+  }
+  
+  return(p)
+}
+
+# Draw in Viewer pane only
+print(
+  plot_win_prob_simple(subset_m,
+                       "Male Second Serves: P(win) vs Speed")
+)
+
+# Draw *and* save
+print(
+  plot_win_prob_simple(subset_f,
+                       "Female Second Serves: P(win) vs Speed",
+                       save_path = "../images/wimbledon_female_second_speed.png")
+)
+
+print(
+  plot_win_prob_simple(subset_m,
+                       "Male Second Serves: P(win) vs Speed",
+                       save_path = "../images/wimbledon_male_second_speed.png")
+)
