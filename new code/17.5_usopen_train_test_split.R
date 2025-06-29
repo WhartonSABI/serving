@@ -84,3 +84,42 @@ results_df <- map_dfr(names(groups), function(g) {
 print(results_df)
 
 write.csv(results_df, "usopen_spline_insample_test.csv", row.names = FALSE)
+
+#-----------------------------------------------------------------------
+#-----------------------------------------------------------------------
+# linear instead of spline
+
+form_speed <- as.formula(
+  serving_player_won ~ p_server_beats_returner +
+    ElapsedSeconds_fixed +
+    importance +
+    Speed_MPH + 
+    factor(ServeWidth) +
+    factor(ServeDepth)
+)
+
+form_ratio <- as.formula(
+  serving_player_won ~ p_server_beats_returner +
+    ElapsedSeconds_fixed +
+    importance +
+    speed_ratio + 
+    factor(ServeWidth) +
+    factor(ServeDepth)
+)
+
+results_df <- map_dfr(names(groups), function(g) {
+  df <- groups[[g]]
+  
+  map_dfr(c(speed = form_speed, ratio = form_ratio), function(fml) {
+    res <- evaluate_split(df, fml)
+    tibble(
+      group      = g,
+      model_type = if (identical(fml, form_speed)) "speed" else "ratio",
+      accuracy   = round(res$accuracy, 4),
+      log_loss   = round(res$logloss, 4)
+    )
+  })
+})
+
+print(results_df)
+write.csv(results_df, "usopen_linear_insample_test.csv", row.names = FALSE)
