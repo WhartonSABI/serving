@@ -542,7 +542,7 @@ subset_f <- rbindlist(list(
 subset_f <- subset_f %>%
   filter(ServeDepth != "", ServeWidth != "")
 
-write.csv(subset_f, "test_subset_f.csv")
+# write.csv(subset_f, "test_subset_f.csv")
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -566,30 +566,63 @@ subset_m <- subset_m %>%
 #-----------------------------------------------------------------------------------------------------
 
 # fix large gaps in elapsed time (female)
-subset_f <- subset_f %>% 
-  arrange(match_id, PointNumber) %>% 
-  group_by(match_id) %>% 
-  mutate(
-    time_diff  = ElapsedSeconds - lag(ElapsedSeconds),
-    avg_dt_pos = mean(time_diff[ElapsedSeconds < 28800 & time_diff > 0],
-                      na.rm = TRUE),
-    jump       = ElapsedSeconds > 28800,
-    offset     = cumsum(jump) * avg_dt_pos,
-    ElapsedSeconds_fixed = ElapsedSeconds - offset
-  ) %>% 
-  ungroup() %>% 
-  select(-time_diff, -avg_dt_pos, -jump, -offset)
+problem_ids <- c("2019-usopen-2231",
+                 "2019-usopen-2230",
+                 "2019-usopen-2229")
 
-# write.csv(subset_f, "../data/usopen_subset_f.csv", row.names = FALSE)
+## i'm raging and can't figure out a way to code this, so for now just delete these three match id's
+subset_f <- subset_f %>%
+  filter(!match_id %in% problem_ids)
 
-#-----------------------------------------------------------------------------------------------------
+## make ElapsedSeeconds_fixed column that is a duplicate of ElapsedSeconds
+subset_f$ElapsedSeconds_fixed <- subset_f$ElapsedSeconds
 
+# # ----------------------------------------------------------------------------- 
+# # helper: repair one match’s clock  ➜ returns the match‐level data frame
+# # -----------------------------------------------------------------------------
+# repair_match <- function(df, reset_cut = 28800, max_gap = 600, fallback_gap = 30) {
+#   df  <- arrange(df, PointNumber)
+#   
+#   # step-to-step change
+#   diff_raw <- c(0, diff(df$ElapsedSeconds))
+#   
+#   # “typical” between-point gap (positive, < 10 min)
+#   typ_gap  <- median(diff_raw[diff_raw > 0 & diff_raw < max_gap], na.rm = TRUE)
+#   if (is.na(typ_gap) || typ_gap <= 0) typ_gap <- fallback_gap   # if jump comes right away
+#   
+#   # flag rows where raw clock leaps forward above 28 800 s
+#   jump <- df$ElapsedSeconds > reset_cut
+#   
+#   # cumulative offset = (# of jumps so far) × typ_gap
+#   offset <- cumsum(jump) * typ_gap
+#   
+#   df$ElapsedSeconds_fixed <- df$ElapsedSeconds - offset
+#   df
+# }
+# 
+# # ----------------------------------------------------------------------------- 
+# # apply the repair ONLY to the three matches
+# # ----------------------------------------------------------------------------- 
+# subset_f_fixed <- subset_f %>%                     # your original male data
+#   group_split(match_id) %>%                        # list of dfs, one per match
+#   purrr::map_dfr(function(df) {
+#     if (df$match_id[1] %in% problem_ids) {
+#       repair_match(df)                             # fix the problem match
+#     } else {
+#       df$ElapsedSeconds_fixed <- df$ElapsedSeconds # leave others untouched
+#       df
+#     }
+#   })
+# 
+# #-----------------------------------------------------------------------------------------------------
+# 
 ## create bradley terry winning probabilities
 
-subset_m <- as.data.table(read.csv("../data/usopen_subset_m.csv"))
-subset_f <- as.data.table(read.csv("../data/usopen_subset_f.csv"))
+# subset_m <- as.data.table(read.csv("../data/usopen_subset_m.csv"))
+# subset_f <- as.data.table(read.csv("../data/usopen_subset_f.csv"))
 
 names(subset_m)
+subset_m <- as.data.table(subset_m)
 
 # Convert ELO to logistic (Bradley-Terry scale)
 subset_m[, welo_p1_bt := 0.0057565 * player1_avg_welo]
@@ -605,11 +638,14 @@ subset_m <- subset_m %>%
 setnames(subset_m, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_m, "../data/usopen_subset_m.csv", row.names = FALSE)
+write.csv(subset_m, "oos_test_usopen_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
 # Convert ELO to logistic (Bradley-Terry scale)
+names(subset_f)
+subset_f <- as.data.table(subset_f)
+
 subset_f[, welo_p1_bt := 0.0057565 * player1_avg_welo]
 subset_f[, welo_p2_bt := 0.0057565 * player2_avg_welo]
 
@@ -623,6 +659,6 @@ subset_f <- subset_f %>%
 setnames(subset_f, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_f, "../data/usopen_subset_f.csv", row.names = FALSE)
+write.csv(subset_f, "oos_test_usopen_subset_f.csv", row.names = FALSE)
 
 # -----------------------------------------------------------------------------------------------------
