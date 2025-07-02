@@ -8,8 +8,146 @@ library(splines)
 library(dplyr)
 
 # --- Load data ---
-subset_m <- fread("usopen_subset_m.csv")
-subset_f <- fread("usopen_subset_f.csv")
+## change to this if we want original data for graphs
+# subset_m <- fread("usopen_subset_m.csv")
+# subset_f <- fread("usopen_subset_f.csv")
+
+##
+subset_m <- fread("scaled/usopen_m_train_scaled.csv")
+subset_f <- fread("scaled/usopen_f_train_scaled.csv")
+
+# --- Helper function to plot model with linear coefs + empirical ---
+plot_linear_model <- function(df, model, speed_col, title, save_path) {
+  
+  ## a) prediction grid --------------------------------------------------------
+  speed_vals <- seq(min(df[[speed_col]], na.rm = TRUE),
+                    max(df[[speed_col]], na.rm = TRUE),
+                    length.out = 200)
+  
+  # build a reference data set where only `speed_col` varies
+  ref_dat <- df |>
+    summarise(across(c(p_server_beats_returner,
+                       ElapsedSeconds_fixed,
+                       importance), \(x) mean(x, na.rm = TRUE))) |>
+    slice(rep(1, length(speed_vals)))    # recycle one row -> 200
+  ref_dat[[speed_col]] <- speed_vals
+  
+  # use modal levels for the factors
+  ref_dat$ServeWidth <- names(which.max(table(df$ServeWidth)))[1]
+  ref_dat$ServeDepth <- names(which.max(table(df$ServeDepth)))[1]
+  
+  pred_prob <- predict(model, newdata = ref_dat, type = "response")
+  
+  pred_df <- tibble(
+    Speed       = speed_vals,
+    Probability = pred_prob,
+    Source      = "Linear Prediction"
+  )
+  
+  ## b) weighted empirical estimate -------------------------------------------
+  df <- df |>
+    mutate(server = if_else(PointServer == 1, player1_name, player2_name)) |>
+    add_count(server, name = "n_points") |>
+    mutate(weight = 1 / n_points)
+  
+  empirical_df <- df |>
+    mutate(speed_bin = cut(.data[[speed_col]],
+                           breaks = seq(floor(min(.data[[speed_col]], na.rm = TRUE)),
+                                        ceiling(max(.data[[speed_col]], na.rm = TRUE)),
+                                        by = ifelse(speed_col == "Speed_MPH", 5, 0.025)))) |>
+    group_by(speed_bin) |>
+    summarise(
+      Speed       = weighted.mean(.data[[speed_col]], w = weight, na.rm = TRUE),
+      Probability = weighted.mean(serving_player_won == 1, w = weight, na.rm = TRUE),
+      .groups     = "drop"
+    ) |>
+    mutate(Source = "Empirical Win Rate (Weighted)")
+  
+  ## c) combine & plot ---------------------------------------------------------
+  plot_df <- bind_rows(empirical_df, pred_df)
+  
+  ggplot(plot_df, aes(Speed, Probability, colour = Source)) +
+    geom_line(size = 1.1) +
+    labs(
+      title = title,
+      x     = ifelse(speed_col == "Speed_MPH", "Serve Speed (MPH)", "Speed Ratio"),
+      y     = "Probability Server Wins",
+      colour = NULL
+    ) +
+    theme_minimal() +
+    scale_color_manual(values = c("black", "red"))
+  
+  ggsave(save_path, bg = "white", width = 8, height = 6, units = "in")
+}
+
+#############################################
+## 2.  Split data into four serve groups ####
+#############################################
+m_first  <- subset_m[ServeNumber == 1]
+m_second <- subset_m[ServeNumber == 2]
+f_first  <- subset_f[ServeNumber == 1]
+f_second <- subset_f[ServeNumber == 2]
+
+####################################################
+## 3.  Fit (linear) GLMs and make the plots ########
+####################################################
+run_linear_group <- function(df, group_id, group_name) {
+  
+  # --- model with Speed_MPH ---------------------------------
+  model_speed <- glm(
+    serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed +
+      importance + Speed_MPH + factor(ServeWidth) + factor(ServeDepth),
+    data   = df,
+    family = binomial
+  )
+  assign(paste0(group_id, "_linear_speed"), model_speed, envir = .GlobalEnv)
+  
+  plot_linear_model(
+    df, model_speed, "Speed_MPH",
+    title     = paste("Linear vs. Empirical (Speed MPH) —", group_name),
+    save_path = paste0("../images/", group_id, "_linear_speed.png")
+  )
+  
+  # --- model with speed_ratio -------------------------------
+  model_ratio <- glm(
+    serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed +
+      importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth),
+    data   = df,
+    family = binomial
+  )
+  assign(paste0(group_id, "_linear_ratio"), model_ratio, envir = .GlobalEnv)
+  
+  plot_linear_model(
+    df, model_ratio, "speed_ratio",
+    title     = paste("Linear vs. Empirical (Speed Ratio) —", group_name),
+    save_path = paste0("../images/", group_id, "_linear_ratio.png")
+  )
+}
+
+# --- run all 4 groups ---
+run_linear_group(m_first,  "m_first",  "Males First Serve")
+run_linear_group(m_second, "m_second", "Males Second Serve")
+run_linear_group(f_first,  "f_first",  "Females First Serve")
+run_linear_group(f_second, "f_second", "Females Second Serve")
+
+############################################
+## 4.  Print model summaries ###############
+############################################
+usopen_model_names <- c(
+  "m_first_linear_speed",  "m_first_linear_ratio",
+  "m_second_linear_speed", "m_second_linear_ratio",
+  "f_first_linear_speed",  "f_first_linear_ratio",
+  "f_second_linear_speed", "f_second_linear_ratio"
+)
+
+for (m in usopen_model_names) {
+  cat("\n==============================\n")
+  cat("Model Summary:", m, "\n")
+  cat("==============================\n")
+  print(summary(get(m)))
+}
+
+
 
 # --- Helper function to plot spline model + empirical ---
 plot_spline_model <- function(df, model, speed_col, title, save_path) {
