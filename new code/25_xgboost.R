@@ -1,15 +1,15 @@
 rm(list = ls())
 
 ## -------- 0. FILE LOCATIONS -------------------------------------------
-path_train_w_m_scaled <- "wimbledon_m_train_scaled.csv" # 2021–2024 data
-path_train_w_f_scaled <- "wimbledon_f_train_scaled.csv"
-path_train_u_m_scaled <- "usopen_m_train_scaled.csv"
-path_train_u_f_scaled <- "usopen_f_train_scaled.csv"
+path_train_w_m_scaled <- "scaled/wimbledon_m_train_scaled.csv" # 2021–2024 data
+path_train_w_f_scaled <- "scaled/wimbledon_f_train_scaled.csv"
+path_train_u_m_scaled <- "scaled/usopen_m_train_scaled.csv"
+path_train_u_f_scaled <- "scaled/usopen_f_train_scaled.csv"
 
-path_oos_w_m_scaled   <- "wimbledon_m_test_scaled.csv"  # 2018–2019 data
-path_oos_w_f_scaled   <- "wimbledon_f_test_scaled.csv"
-path_oos_u_m_scaled   <- "usopen_m_test_scaled.csv"
-path_oos_u_f_scaled   <- "usopen_f_test_scaled.csv"
+path_oos_w_m_scaled   <- "scaled/wimbledon_m_test_scaled.csv"  # 2018–2019 data
+path_oos_w_f_scaled   <- "scaled/wimbledon_f_test_scaled.csv"
+path_oos_u_m_scaled   <- "scaled/usopen_m_test_scaled.csv"
+path_oos_u_f_scaled   <- "scaled/usopen_f_test_scaled.csv"
 
 ## -------- 1. LIBRARIES -------------------------------------------
 library(tidyverse)   # dplyr / readr / ggplot2 / tibble
@@ -36,7 +36,7 @@ form_speed <- serving_player_won ~
   p_server_beats_returner +
   ElapsedSeconds_fixed +
   importance +
-  Speed_MPH
+  speed_ratio # swap out speed_ratio and Speed_MPH as desired
 
 ## -------- 4. HELPER TO BUILD XGB DMatrix -----------------------
 make_dtrain <- function(df) {

@@ -1,9 +1,22 @@
-"tournament","sex","serve","accuracy"
-"Wimbledon","Men","1st",0.6439917772379
-"Wimbledon","Women","1st",0.771392081736909
-"Wimbledon","Men","2nd",0.634962078826309
-"Wimbledon","Women","2nd",0.732405111577341
-"US Open","Men","1st",0.814595797968554
-"US Open","Women","1st",0.768886234696924
-"US Open","Men","2nd",0.755354593050928
-"US Open","Women","2nd",0.720617987860953
+tournament,sex,serve,accuracy,(speed MPH)
+Wimbledon,Men,1st,0.643991777,
+Wimbledon,Women,1st,0.771392082,
+Wimbledon,Men,2nd,0.634962079,
+Wimbledon,Women,2nd,0.732405112,
+US Open,Men,1st,0.814595798,
+US Open,Women,1st,0.768886235,
+US Open,Men,2nd,0.755354593,
+US Open,Women,2nd,0.720617988,
+,,,,
+,,,,
+,,,,
+,,,,
+tournament,sex,serve,accuracy,(speed ratio)
+Wimbledon,Men,1st,0.6418,
+Wimbledon,Women,1st,0.7655,
+Wimbledon,Men,2nd,0.6328,
+Wimbledon,Women,2nd,0.7265,
+US Open,Men,1st,0.8197,
+US Open,Women,1st,0.7739,
+US Open,Men,2nd,0.7624,
+US Open,Women,2nd,0.7203,
