@@ -31,12 +31,15 @@ names(usopen_2021)
 colSums(is.na(usopen_2021))
 
 # binary variable: whether serving player won or lost
+# usopen_2021 <- usopen_2021 %>%
+#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 usopen_2021 <- usopen_2021 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
-
-write.csv(usopen_2021, "../data/usopen_2021_combined.csv", row.names = FALSE)
+write.csv(usopen_2021, "out_data/usopen_2021_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -62,12 +65,16 @@ names(usopen_2022)
 colSums(is.na(usopen_2022))
 
 # binary variable: whether serving player won or lost
+# usopen_2022 <- usopen_2022 %>%
+#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 usopen_2022 <- usopen_2022 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2022, "../data/usopen_2022_combined.csv", row.names = FALSE)
+write.csv(usopen_2022, "out_data/usopen_2022_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -93,12 +100,15 @@ names(usopen_2023)
 colSums(is.na(usopen_2023))
 
 # binary variable: whether serving player won or lost
+# usopen_2023 <- usopen_2023 %>%
+#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 usopen_2023 <- usopen_2023 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
-
-write.csv(usopen_2023, "../data/usopen_2023_combined.csv", row.names = FALSE)
+write.csv(usopen_2023, "out_data/usopen_2023_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -124,12 +134,16 @@ names(usopen_2024)
 colSums(is.na(usopen_2024))
 
 # binary variable: whether serving player won or lost
+# usopen_2024 <- usopen_2024 %>%
+#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 usopen_2024 <- usopen_2024 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2024, "../data/usopen_2024_combined.csv", row.names = FALSE)
+write.csv(usopen_2024, "out_data/usopen_2024_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -366,8 +380,8 @@ subset_2024_f <- subset_2024_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2024_m, "../data/usopen_subset_2024_m.csv", row.names = FALSE)
-write.csv(subset_2024_f, "../data/usopen_subset_2024_f.csv", row.names = FALSE)
+write.csv(subset_2024_m, "out_data/usopen_subset_2024_m.csv", row.names = FALSE)
+write.csv(subset_2024_f, "out_data/usopen_subset_2024_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------
@@ -583,8 +597,8 @@ subset_2023_f <- subset_2023_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2023_m, "../data/usopen_subset_2023_m.csv", row.names = FALSE)
-write.csv(subset_2023_f, "../data/usopen_subset_2023_f.csv", row.names = FALSE)
+write.csv(subset_2023_m, "out_data/usopen_subset_2023_m.csv", row.names = FALSE)
+write.csv(subset_2023_f, "out_data/usopen_subset_2023_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------
@@ -800,8 +814,8 @@ subset_2022_f <- subset_2022_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2022_m, "../data/usopen_subset_2022_m.csv", row.names = FALSE)
-write.csv(subset_2022_f, "../data/usopen_subset_2022_f.csv", row.names = FALSE)
+write.csv(subset_2022_m, "out_data/usopen_subset_2022_m.csv", row.names = FALSE)
+write.csv(subset_2022_f, "out_data/usopen_subset_2022_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -1016,8 +1030,8 @@ subset_2021_f <- subset_2021_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2021_m, "../data/usopen_subset_2021_m.csv", row.names = FALSE)
-write.csv(subset_2021_f, "../data/usopen_subset_2021_f.csv", row.names = FALSE)
+write.csv(subset_2021_m, "out_data/usopen_subset_2021_m.csv", row.names = FALSE)
+write.csv(subset_2021_f, "out_data/usopen_subset_2021_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
