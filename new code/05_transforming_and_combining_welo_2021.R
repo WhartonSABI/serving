@@ -31,7 +31,7 @@ add_speed_ratio_column <- function(data) {
 ### 2021 data
 
 # binary variable for whether the point was won by the server
-wimbledon_2021 <- as.data.table(read.csv("../data/wimbledon_2021_combined.csv"))
+wimbledon_2021 <- as.data.table(read.csv("out_data/wimbledon_2021_combined.csv"))
 names(wimbledon_2021)
 
 #-----------------------------------------------------------------------------------------------------
@@ -257,8 +257,8 @@ subset_2021_f <- subset_2021_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2021_m, "../data/wimbledon_subset_2021_m.csv", row.names = FALSE)
-write.csv(subset_2021_f, "../data/wimbledon_subset_2021_f.csv", row.names = FALSE)
+write.csv(subset_2021_m, "out_data/wimbledon_subset_2021_m.csv", row.names = FALSE)
+write.csv(subset_2021_f, "out_data/wimbledon_subset_2021_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 

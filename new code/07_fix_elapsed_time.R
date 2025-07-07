@@ -8,8 +8,8 @@ library(hms)
 
 #-----------------------------------------------------------------------------------------------------
 
-subset_m <- as.data.table(read.csv("../data/wimbledon_subset_m.csv"))
-subset_f <- as.data.table(read.csv("../data/wimbledon_subset_f.csv"))
+subset_m <- as.data.table(read.csv("out_data/wimbledon_subset_m.csv"))
+subset_f <- as.data.table(read.csv("out_data/wimbledon_subset_f.csv"))
 
 names(subset_m)
 
@@ -33,7 +33,7 @@ subset_m <- subset_m %>%
 setnames(subset_m, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_m, "../data/wimbledon_subset_m.csv", row.names = FALSE)
+write.csv(subset_m, "out_data/wimbledon_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ subset_f <- subset_f %>%
 setnames(subset_f, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
+write.csv(subset_f, "out_data/wimbledon_subset_f.csv", row.names = FALSE)
 
 
 #-----------------------------------------------------------------------------------------------------
@@ -92,7 +92,11 @@ subset_m <- subset_m %>%
   select(-lag_elapsed, -time_diff, -avg_time_diff, -flagged)
 colSums(is.na(subset_m))
 
-write.csv(subset_m, "../data/wimbledon_subset_m.csv", row.names = FALSE)
+# graph histogram of ElapsedSeconds_fixed in subset_m
+# ggplot(subset_m, aes(x = ElapsedSeconds_fixed)) +
+#   geom_histogram(color = "black", fill = "steelblue", na.rm = TRUE)
+
+write.csv(subset_m, "out_data/wimbledon_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 

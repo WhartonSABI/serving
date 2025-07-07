@@ -296,13 +296,18 @@ wimbledon_2021 <- left_join(wimbledon_2021_points, wimbledon_2021_matches, by = 
 names(wimbledon_2021)
 colSums(is.na(wimbledon_2021))
 
-# binary variable: whether serving player won or lost
 wimbledon_2021 <- wimbledon_2021 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(wimbledon_2021, "../data/wimbledon_2021_combined.csv", row.names = FALSE)
+# binary variable: whether serving player won or lost
+# wimbledon_2021 <- wimbledon_2021 %>%
+  # filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+  # mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
+
+write.csv(wimbledon_2021, "out_data/wimbledon_2021_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -329,13 +334,18 @@ wimbledon_2022 <- left_join(wimbledon_2022_points, wimbledon_2022_matches, by = 
 names(wimbledon_2022)
 colSums(is.na(wimbledon_2022))
 
-# binary variable: whether serving player won or lost
 wimbledon_2022 <- wimbledon_2022 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(wimbledon_2022, "../data/wimbledon_2022_combined.csv", row.names = FALSE)
+# binary variable: whether serving player won or lost
+# wimbledon_2022 <- wimbledon_2022 %>%
+#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
+
+write.csv(wimbledon_2022, "out_data/wimbledon_2022_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -362,13 +372,18 @@ wimbledon_2023 <- left_join(wimbledon_2023_points, wimbledon_2023_matches, by = 
 names(wimbledon_2023)
 colSums(is.na(wimbledon_2023))
 
-# binary variable: whether serving player won or lost
 wimbledon_2023 <- wimbledon_2023 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(wimbledon_2023, "../data/wimbledon_2023_combined.csv", row.names = FALSE)
+# binary variable: whether serving player won or lost
+# wimbledon_2023 <- wimbledon_2023 %>%
+#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
+
+write.csv(wimbledon_2023, "out_data/wimbledon_2023_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -395,12 +410,17 @@ wimbledon_2024 <- left_join(wimbledon_2024_points, wimbledon_2024_matches, by = 
 names(wimbledon_2024)
 colSums(is.na(wimbledon_2024))
 
-# binary variable: whether serving player won or lost
 wimbledon_2024 <- wimbledon_2024 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(wimbledon_2024, "../data/wimbledon_2024_combined.csv", row.names = FALSE)
+# binary variable: whether serving player won or lost
+# wimbledon_2024 <- wimbledon_2024 %>%
+#   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
+
+write.csv(wimbledon_2024, "out_data/wimbledon_2024_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
