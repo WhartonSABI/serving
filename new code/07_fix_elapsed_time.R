@@ -143,3 +143,33 @@ write.csv(subset_f, "out_data/wimbledon_subset_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
+# standardize numeric cols
+
+cols_to_standardize <- c(
+  "Speed_MPH",
+  "ElapsedSeconds_fixed",
+  "df_pct_server",
+  "p_server_beats_returner",
+  "importance"
+)
+
+subset_m <- subset_m %>% 
+  mutate(
+    across(
+      all_of(cols_to_standardize),
+      ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)),   # mean 0, sd 1
+      .names = "{.col}_z"
+    )
+  )
+subset_f <- subset_f %>%
+  mutate(
+    across(
+      all_of(cols_to_standardize),
+      ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)),   # mean 0, sd 1
+      .names = "{.col}_z"
+    )
+  )
+
+# write the standardized data to csv
+write.csv(subset_m, "out_data/scaled/wimbledon_subset_m_training.csv", row.names = FALSE)
+write.csv(subset_f, "out_data/scaled/wimbledon_subset_f_training.csv", row.names = FALSE)

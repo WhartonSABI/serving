@@ -172,3 +172,142 @@ setnames(subset_f, old = c("... <- NULL"),
 write.csv(subset_f, "out_data/usopen_subset_f.csv", row.names = FALSE)
 
 # -----------------------------------------------------------------------------------------------------
+
+# scale data
+subset_m <- as.data.table(read.csv("out_data/usopen_subset_m.csv"))
+subset_f <- as.data.table(read.csv("out_data/usopen_subset_f.csv"))
+
+# -----------------------------------------------------------------------------------------------------
+
+## add servers' percent double fault
+# 1) get every player who ever served
+servers <- subset_m %>%
+  filter(ServeNumber %in% c(1,2)) %>%
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>%
+  pull(ServerName) %>%
+  unique()
+
+# 2) function to compute df_pct for one server
+compute_df_for <- function(name) {
+  subset_m %>%
+    filter(
+      (PointServer == 1 & player1 == name) |
+        (PointServer == 2 & player2 == name)
+    ) %>%
+    mutate(
+      DF_flag = if_else(PointServer == 1, P1DoubleFault, P2DoubleFault)
+    ) %>%
+    group_by(match_id) %>%
+    summarise(
+      ServerName    = name,
+      total_serves  = n(),
+      double_faults = sum(DF_flag, na.rm = TRUE),
+      df_pct_server        = double_faults / total_serves,
+      .groups       = "drop"
+    )
+}
+
+# 3) apply it to every server and bind the results
+all_rates <- map_dfr(servers, compute_df_for)
+
+print(all_rates)
+
+## merge all_rates with subset_m based on match_id and ServerName
+subset_m_test <- subset_m %>% 
+  # identify who is serving this point
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>% 
+  
+  # now the key columns exist in both tables
+  left_join(all_rates, by = c("match_id", "ServerName"))
+
+colSums(is.na(subset_m_test))
+#-----------------------------------------------------------------------------------------------------
+
+# filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
+subset_m_test <- subset_m_test %>%
+  filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
+         ServeDepth %in% c("CTL", "NCTL"))
+
+# -----------------------------------------------------------------------------------------------------
+
+## add servers' percent double fault
+# 1) get every player who ever served
+servers <- subset_f %>%
+  filter(ServeNumber %in% c(1,2)) %>%
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>%
+  pull(ServerName) %>%
+  unique()
+
+# 2) function to compute df_pct for one server
+compute_df_for <- function(name) {
+  subset_f %>%
+    filter(
+      (PointServer == 1 & player1 == name) |
+        (PointServer == 2 & player2 == name)
+    ) %>%
+    mutate(
+      DF_flag = if_else(PointServer == 1, P1DoubleFault, P2DoubleFault)
+    ) %>%
+    group_by(match_id) %>%
+    summarise(
+      ServerName    = name,
+      total_serves  = n(),
+      double_faults = sum(DF_flag, na.rm = TRUE),
+      df_pct_server        = double_faults / total_serves,
+      .groups       = "drop"
+    )
+}
+
+# 3) apply it to every server and bind the results
+all_rates <- map_dfr(servers, compute_df_for)
+
+print(all_rates)
+
+## merge all_rates with subset_m based on match_id and ServerName
+subset_f_test <- subset_f %>% 
+  # identify who is serving this point
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>% 
+  
+  # now the key columns exist in both tables
+  left_join(all_rates, by = c("match_id", "ServerName"))
+
+colSums(is.na(subset_f_test))
+#-----------------------------------------------------------------------------------------------------
+
+# filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
+subset_f_test <- subset_f_test %>%
+  filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
+         ServeDepth %in% c("CTL", "NCTL"))
+
+# -----------------------------------------------------------------------------------------------------
+
+cols_to_standardize <- c(
+  "Speed_MPH",
+  "ElapsedSeconds_fixed",
+  "df_pct_server",
+  "p_server_beats_returner",
+  "importance"
+)
+
+names(subset_f_test)
+
+subset_m <- subset_m_test %>% 
+  mutate(
+    across(
+      all_of(cols_to_standardize),
+      ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)),   # mean 0, sd 1
+      .names = "{.col}_z"
+    )
+  )
+subset_f <- subset_f_test %>%
+  mutate(
+    across(
+      all_of(cols_to_standardize),
+      ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)),   # mean 0, sd 1
+      .names = "{.col}_z"
+    )
+  )
+
+# write the standardized data to csv
+write.csv(subset_m, "out_data/scaled/usopen_subset_m_training.csv", row.names = FALSE)
+write.csv(subset_f, "out_data/scaled/usopen_subset_f_training.csv", row.names = FALSE)
