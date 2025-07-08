@@ -26,6 +26,8 @@ train_sets <- list(
   usopen_f    = fread(path_train_u_f_scaled)
 )
 
+train_sets <- lapply(train_sets, function(dt) dt[Speed_MPH > 0])
+
 ## ensure factors are truly factors (and set an explicit level order if you like)
 make_factors <- function(df) {
   df$ServeWidth <- factor(df$ServeWidth)   # e.g. levels = c("T", "Body", "Wide")
@@ -87,6 +89,9 @@ test_sets <- map(test_sets, ~{
   if (!"ElapsedSeconds_fixed" %in% names(.x)) .x$ElapsedSeconds_fixed <- .x$ElapsedSeconds
   make_factors(.x)
 })
+
+test_sets  <- lapply(test_sets,  function(dt) dt[Speed_MPH > 0])
+
 
 # # ─── ACCURACY COMPUTATION FOR ALL FOUR EVENTS ───
 # 

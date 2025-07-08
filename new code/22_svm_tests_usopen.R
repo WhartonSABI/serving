@@ -142,7 +142,7 @@
 
 
 
-
+rm(list=ls())
 
 ############################################################
 ## 0.  Packages & helper
@@ -161,18 +161,18 @@ fast_logloss <- function(truth, prob1, eps = 1e-15) {
 ############################################################
 ## 1.  Load data
 ############################################################
-paths_train <- list(M = "scaled/usopen_m_train_scaled.csv",
-                    F = "scaled/usopen_f_train_scaled.csv")
-paths_test  <- list(M = "scaled/usopen_m_test_scaled.csv",
-                    F = "scaled/usopen_f_test_scaled.csv")
+paths_train <- list(M = "out_data/scaled/usopen_subset_m_training.csv",
+                    F = "out_data/scaled/usopen_subset_f_training.csv")
+paths_test  <- list(M = "out_data/scaled/usopen_subset_m_testing.csv",
+                    F = "out_data/scaled/usopen_subset_f_testing.csv")
 
-train_list <- map(paths_train, ~ as.data.table(fread(.x)))
-test_list  <- map(paths_test , ~ as.data.table(fread(.x)))
+train_list <- map(paths_train, ~ as.data.table(fread(.x))[Speed_MPH > 0])
+test_list  <- map(paths_test,  ~ as.data.table(fread(.x))[Speed_MPH > 0])
 
 ############################################################
 ## 2.  Settings
 ############################################################
-base_num   <- c("importance", "p_server_beats_returner", "ElapsedSeconds_fixed")
+base_num   <- c("importance_z", "p_server_beats_returner_z", "ElapsedSeconds_fixed_z", "df_pct_server_z")
 vars_fact  <- c("ServeWidth", "ServeDepth")
 
 grid_small <- list(                           # quick 3×3 grid

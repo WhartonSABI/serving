@@ -141,6 +141,7 @@
 # 
 
 
+rm(list=ls())
 
 ############################################################
 ## 0.  Packages & helper
@@ -159,18 +160,18 @@ fast_logloss <- function(truth, prob1, eps = 1e-15) {
 ############################################################
 ## 1.  Load data
 ############################################################
-paths_train <- list(M = "scaled/wimbledon_m_train_scaled.csv",
-                    F = "scaled/wimbledon_f_train_scaled.csv")
-paths_test  <- list(M = "scaled/wimbledon_m_test_scaled.csv",
-                    F = "scaled/wimbledon_f_test_scaled.csv")
+paths_train <- list(M = "out_data/scaled/wimbledon_subset_m_training.csv",
+                    F = "out_data/scaled/wimbledon_subset_f_training.csv")
+paths_test  <- list(M = "out_data/scaled/wimbledon_subset_m_testing.csv",
+                    F = "out_data/scaled/wimbledon_subset_f_testing.csv")
 
-train_list <- map(paths_train, ~ as.data.table(fread(.x)))
-test_list  <- map(paths_test , ~ as.data.table(fread(.x)))
+train_list <- map(paths_train, ~ as.data.table(fread(.x))[Speed_MPH > 0])
+test_list  <- map(paths_test,  ~ as.data.table(fread(.x))[Speed_MPH > 0])
 
 ############################################################
 ## 2.  Settings
 ############################################################
-base_num   <- c("importance", "p_server_beats_returner", "ElapsedSeconds_fixed")
+base_num   <- c("importance_z", "p_server_beats_returner_z", "ElapsedSeconds_fixed_z", "df_pct_server_z")
 vars_fact  <- c("ServeWidth", "ServeDepth")
 
 grid_small <- list(                           # quick 3×3 grid
@@ -202,15 +203,15 @@ for (g in names(train_list)) {
     train_sub[, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
     test_sub [, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
     
-    for (speed_var in c("Speed_MPH", "speed_ratio")) {
+    for (speed_var in c("Speed_MPH_z", "speed_ratio_z")) {
       vars_num <- c(base_num, speed_var)
       
       ## modelling frames
       train_dat <- train_sub[, c(vars_num, vars_fact, "serving_player_won"), with = FALSE]
       test_dat  <- test_sub [, c(vars_num, vars_fact), with = FALSE]
       
-      ## -------- 3-fold tune on ≤10 000 rows ---------------------------
-      n_tune   <- min(10000, nrow(train_dat))
+      ## -------- 3-fold tune on ≤20 000 rows ---------------------------
+      n_tune   <- min(20000, nrow(train_dat))
       tune_dat <- train_dat[sample(nrow(train_dat), n_tune)]
       
       tuned <- tune(
