@@ -8,8 +8,8 @@ library(reshape2)
 
 #-----------------------------------------------------------------------------------------------------
 
-subset_m <- as.data.table(read.csv("../data/wimbledon_subset_m.csv"))
-subset_f <- as.data.table(read.csv("../data/wimbledon_subset_f.csv"))
+subset_m <- as.data.table(read.csv("out_data/wimbledon_subset_m.csv"))
+subset_f <- as.data.table(read.csv("out_data/wimbledon_subset_f.csv"))
 
 names(subset_m)
 
@@ -19,7 +19,7 @@ subset_f_second <- subset_f[ServeNumber == 2]
 #-----------------------------------------------------------------------------------------------------
 
 ## corr matrix male
-numerical_x_cols <- c("p_server_beats_returner", "ElapsedSeconds_fixed", "importance", "speed_ratio")
+numerical_x_cols <- c("p_server_beats_returner", "ElapsedSeconds_fixed", "importance", "speed_ratio", "df_pct_server")
 
 subset_m_x <- subset_m_second %>% select(all_of(numerical_x_cols))
 
@@ -60,7 +60,7 @@ ggsave("../images/corr_matrix_male.png", bg = "white",
 #-----------------------------------------------------------------------------------------------------
 
 ## corr matrix female
-numerical_x_cols <- c("p_server_beats_returner", "ElapsedSeconds_fixed", "importance", "speed_ratio")
+numerical_x_cols <- c("p_server_beats_returner", "ElapsedSeconds_fixed", "importance", "speed_ratio", "df_pct_server")
 
 subset_f_x <- subset_f_second %>% select(all_of(numerical_x_cols))
 
