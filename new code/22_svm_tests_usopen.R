@@ -204,7 +204,7 @@ for (g in names(train_list)) {
     train_sub[, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
     test_sub [, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
     
-    for (speed_var in c("Speed_MPH", "speed_ratio")) {
+    for (speed_var in c("Speed_MPH_z", "speed_ratio_z")) {
       vars_num <- c(base_num, speed_var)
       
       ## modelling frames

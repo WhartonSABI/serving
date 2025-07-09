@@ -34,17 +34,17 @@ set.seed(42)  # global reproducibility
 
 ############################################################
 ## 1.  Load data --------------------------------------------------------
-paths_train <- list(M = "scaled/wimbledon_m_train_scaled.csv",
-                    F = "scaled/wimbledon_f_train_scaled.csv")
-paths_test  <- list(M = "scaled/wimbledon_m_test_scaled.csv",
-                    F = "scaled/wimbledon_f_test_scaled.csv")
+paths_train <- list(M = "out_data/scaled/wimbledon_subset_m_training.csv",
+                    F = "out_data/scaled/wimbledon_subset_f_training.csv")
+paths_test  <- list(M = "out_data/scaled/wimbledon_subset_m_testing.csv",
+                    F = "out_data/scaled/wimbledon_subset_f_testing.csv")
 
-train_list <- map(paths_train, ~ as.data.table(fread(.x)))
-test_list  <- map(paths_test , ~ as.data.table(fread(.x)))
+train_list <- map(paths_train, ~ as.data.table(fread(.x))[Speed_MPH > 0])
+test_list  <- map(paths_test,  ~ as.data.table(fread(.x))[Speed_MPH > 0])
 
 ############################################################
 ## 2.  Settings ---------------------------------------------------------
-base_num  <- c("importance", "p_server_beats_returner", "ElapsedSeconds_fixed")
+base_num   <- c("importance_z", "p_server_beats_returner_z", "ElapsedSeconds_fixed_z", "df_pct_server_z")
 vars_fact <- c("ServeWidth", "ServeDepth")
 
 ## small tuning grid: hidden-units × weight-decay
@@ -75,7 +75,7 @@ for (g in names(train_list)) {
     train_sub[, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
     test_sub [, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
     
-    for (speed_var in c("Speed_MPH", "speed_ratio")) {
+    for (speed_var in c("Speed_MPH_z", "speed_ratio_z")) {
       vars_num <- c(base_num, speed_var)
       
       ## modelling frames

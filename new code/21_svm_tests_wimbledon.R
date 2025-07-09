@@ -210,8 +210,8 @@ for (g in names(train_list)) {
       train_dat <- train_sub[, c(vars_num, vars_fact, "serving_player_won"), with = FALSE]
       test_dat  <- test_sub [, c(vars_num, vars_fact), with = FALSE]
       
-      ## -------- 3-fold tune on ≤20 000 rows ---------------------------
-      n_tune   <- min(20000, nrow(train_dat))
+      ## -------- 3-fold tune on ≤10 000 rows ---------------------------
+      n_tune   <- min(10000, nrow(train_dat))
       tune_dat <- train_dat[sample(nrow(train_dat), n_tune)]
       
       tuned <- tune(

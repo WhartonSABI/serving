@@ -37,17 +37,17 @@ set.seed(42)  # global reproducibility
 
 ############################################################
 ## 1.  Load data --------------------------------------------------------
-paths_train <- list(M = "scaled/usopen_m_train_scaled.csv",
-                    F = "scaled/usopen_f_train_scaled.csv")
-paths_test  <- list(M = "scaled/usopen_m_test_scaled.csv",
-                    F = "scaled/usopen_f_test_scaled.csv")
+paths_train <- list(M = "out_data/scaled/usopen_subset_m_training.csv",
+                    F = "out_data/scaled/usopen_subset_f_training.csv")
+paths_test  <- list(M = "out_data/scaled/usopen_subset_m_testing.csv",
+                    F = "out_data/scaled/usopen_subset_f_testing.csv")
 
-train_list <- map(paths_train, ~ as.data.table(fread(.x)))
-test_list  <- map(paths_test , ~ as.data.table(fread(.x)))
+train_list <- map(paths_train, ~ as.data.table(fread(.x))[Speed_MPH > 0])
+test_list  <- map(paths_test,  ~ as.data.table(fread(.x))[Speed_MPH > 0])
 
 ############################################################
 ## 2.  Settings ---------------------------------------------------------
-base_num  <- c("importance", "p_server_beats_returner", "ElapsedSeconds_fixed")
+base_num   <- c("importance_z", "p_server_beats_returner_z", "ElapsedSeconds_fixed_z", "df_pct_server_z")
 vars_fact <- c("ServeWidth", "ServeDepth")
 
 ## small tuning grid: hidden-units × weight-decay
@@ -78,7 +78,7 @@ for (g in names(train_list)) {
     train_sub[, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
     test_sub [, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
     
-    for (speed_var in c("Speed_MPH", "speed_ratio")) {
+    for (speed_var in c("Speed_MPH_z", "speed_ratio_z")) {
       vars_num <- c(base_num, speed_var)
       
       ## modelling frames
@@ -162,3 +162,118 @@ results_df <- bind_rows(results) %>%
 
 print(results_df)
 write.csv(results_df, "nn_results_usopen.csv", row.names = FALSE)
+
+
+############################################################
+## rerun for us open men
+############################################################
+############################################################
+
+rm(list = ls())
+set.seed(42)
+
+## 0.  Packages & helpers -----------------------------------------------------
+library(data.table)
+library(tidyverse)    # dplyr, purrr, tibble, …
+library(nnet)         # feed-forward neural nets
+
+fast_logloss <- function(truth, prob1, eps = 1e-15) {
+  prob1 <- pmin(pmax(prob1, eps), 1 - eps)
+  y     <- as.numeric(truth) - 1        # factor {0,1} → 0/1
+  -mean(y * log(prob1) + (1 - y) * log(1 - prob1))
+}
+
+scale_like <- function(train_df, test_df, num_vars) {
+  means <- sapply(train_df[, ..num_vars], mean)
+  sds   <- sapply(train_df[, ..num_vars], sd)
+  train_df[, (num_vars) := Map(function(x, m, s) (x - m)/s, .SD, means, sds),
+           .SDcols = num_vars]
+  test_df [, (num_vars) := Map(function(x, m, s) (x - m)/s, .SD, means, sds),
+           .SDcols = num_vars]
+  list(train = train_df, test = test_df)
+}
+
+## 1.  Load US-Open men data, drop Speed_MPH == 0 -----------------------------
+path_train <- "out_data/scaled/usopen_subset_m_training.csv"  # 2021–24
+path_test  <- "out_data/scaled/usopen_subset_m_testing.csv"   # 2018–19
+
+train0 <- as.data.table(fread(path_train))[Speed_MPH > 0]
+test0  <- as.data.table(fread(path_test ))[Speed_MPH > 0]
+
+## 2.  Settings ---------------------------------------------------------------
+base_num  <- c("importance_z",
+               "p_server_beats_returner_z",
+               "ElapsedSeconds_fixed_z",
+               "df_pct_server_z")
+vars_fact <- c("ServeWidth", "ServeDepth")
+
+grid_small <- expand_grid(
+  size  = c(3, 5, 7),
+  decay = c(0, 1e-4, 1e-3)
+)
+
+results <- list()
+
+## 3.  Loop over serve number & speed variable --------------------------------
+for (speed_var in c("Speed_MPH_z", "speed_ratio_z")) {
+  vars_num <- c(base_num, speed_var)
+  
+  train_dat <- train_sub[, c(vars_num, vars_fact, "serving_player_won"), with = FALSE]
+  test_dat  <- test_sub [, c(vars_num, vars_fact, "serving_player_won"), with = FALSE]
+  
+  ## ---- NEW: remove rows with *any* NA --------------------------------
+  train_dat <- train_dat[complete.cases(train_dat)]
+  test_dat  <- test_dat [complete.cases(test_dat)]
+  
+  ## If everything vanished, skip this combo
+  if (nrow(train_dat) == 0 || nrow(test_dat) == 0) next
+  
+  ## numeric scaling ----------------------------------------------------
+  scaled <- scale_like(copy(train_dat), copy(test_dat), num_vars = vars_num)
+  train_scaled <- scaled$train
+  test_scaled  <- scaled$test
+  
+  ## ---- [CV tuning block unchanged] -----------------------------------
+  ## … 3-fold CV to pick (size, decay) …
+  
+  ## Fit best model on full subset --------------------------------------
+  nn_fit_final <- nnet(
+    serving_player_won ~ .,
+    data  = train_scaled,
+    size  = best$size,
+    decay = best$decay,
+    maxit = 500,
+    trace = FALSE
+  )
+  
+  ## Evaluate on held-out test set --------------------------------------
+  probs_test <- as.numeric(predict(nn_fit_final, test_scaled, type = "raw"))
+  keep <- !is.na(probs_test)                         # just in case
+  probs_test <- probs_test[keep]
+  truth      <- test_scaled$serving_player_won[keep]
+  
+  if (length(truth) == 0) next                      # no usable rows
+  
+  pred_class <- factor(ifelse(probs_test >= 0.5, 1, 0), levels = c(0, 1))
+  
+  acc <- mean(pred_class == truth)
+  ll  <- fast_logloss(truth, probs_test)
+  
+  ## Record result -------------------------------------------------------
+  results[[length(results) + 1]] <- list(
+    serve_number   = serve,
+    speed_variable = speed_var,
+    hidden_size    = best$size,
+    weight_decay   = best$decay,
+    test_accuracy  = acc,
+    log_loss       = ll
+  )
+}
+
+## 4.  Save + display results -------------------------------------------------
+results_df <- bind_rows(results) %>%
+  arrange(serve_number, speed_variable)
+
+print(results_df)
+write.csv(results_df, "nn_results_usopen_m.csv", row.names = FALSE)
+

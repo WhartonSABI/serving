@@ -1,0 +1,5 @@
+"serve_number","speed_variable","hidden_size","weight_decay","test_accuracy","log_loss"
+1,"Speed_MPH_z",3,1e-04,NA,NA
+1,"speed_ratio_z",5,0,NA,NA
+2,"Speed_MPH_z",3,0,NA,NA
+2,"speed_ratio_z",5,1e-04,NA,NA
