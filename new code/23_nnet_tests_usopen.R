@@ -204,10 +204,14 @@ path_test  <- "out_data/scaled/usopen_subset_m_testing.csv"   # 2018-19
 train0 <- as.data.table(fread(path_train))[Speed_MPH > 0]
 test0  <- as.data.table(fread(path_test ))[Speed_MPH > 0]
 
-colSums(is.na(train0))  # check for NAs
-summary(train0)
+colSums(is.na(test0))  # check for NAs
+# summary(train0)
 # find all unique values in ServeWidth column
-unique(train0$ServeDepth)  # check factor levels
+# unique(train0$ServeDepth)  # check factor levels
+
+# remove NAs from test0 for all columns
+test0 <- na.omit(test0)
+
 
 ## 2.  Predictor sets & tuning grid -------------------------------------------
 base_num  <- c("importance_z",
@@ -282,12 +286,41 @@ for (serve in c(1, 2)) {
                      size = best$size, decay = best$decay,
                      maxit = 500, trace = FALSE)
     
-    # evaluate on test subset -------------------------------------------------
-    p_test <- as.numeric(predict(nn_final, test_scaled, type = "raw"))
-    cls    <- factor(ifelse(p_test >= 0.5, 1, 0), levels = c(0, 1))
+    # # evaluate on test subset -------------------------------------------------
+    # p_test <- as.numeric(predict(nn_final, test_scaled, type = "raw"))
+    # cls    <- factor(ifelse(p_test >= 0.5, 1, 0), levels = c(0, 1))
     
-    acc <- mean(cls == test_scaled$serving_player_won)
+    # ── evaluate on test subset -------------------------------------------
+    p_test <- as.numeric(predict(nn_final, test_scaled, type = "raw"))
+    
+    ## ── NEW: diagnostics --------------------------------------------------
+    pred_tbl <- data.table(
+      row_id = seq_len(nrow(test_scaled)),
+      prob   = p_test,
+      truth  = as.numeric(as.character(test_scaled$serving_player_won))  # 0/1
+    )
+    
+    cat("\nFirst 20 predictions (row_id, prob, truth):\n")
+    print(head(pred_tbl, 20))
+    
+    if (anyNA(pred_tbl$prob)) {
+      na_rows <- pred_tbl[is.na(prob)]$row_id
+      cat("\nNumber of NA predictions:", length(na_rows), "\n")
+      cat("Showing the first few offending rows and their factor levels:\n")
+      print(
+        test_scaled[na_rows,
+                    c(vars_fact, vars_num),   # vars_fact / vars_num from your script
+                    with = FALSE][1:10]
+      )
+    }
+    ## ----------------------------------------------------------------------
+    
+    cls <- factor(ifelse(p_test >= 0.5, 1, 0), levels = c(0, 1))
+    acc <- mean(cls == test_scaled$serving_player_won, na.rm = TRUE)
     ll  <- fast_logloss(test_scaled$serving_player_won, p_test)
+    
+    # acc <- mean(cls == test_scaled$serving_player_won)
+    # ll  <- fast_logloss(test_scaled$serving_player_won, p_test)
     
     results[[length(results) + 1]] <- list(
       serve_number   = serve,
@@ -306,4 +339,4 @@ for (serve in c(1, 2)) {
 results_df <- bind_rows(results) %>% arrange(serve_number, speed_variable)
 
 print(results_df)
-write.csv(results_df, "nn_results_usopen_m.csv", row.names = FALSE)
+# write.csv(results_df, "nn_results_usopen_m.csv", row.names = FALSE)
