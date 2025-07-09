@@ -174,33 +174,42 @@ set.seed(42)
 
 ## 0.  Packages & helpers -----------------------------------------------------
 library(data.table)
-library(tidyverse)    # dplyr, purrr, tibble, …
-library(nnet)         # feed-forward neural nets
+library(tidyverse)   # dplyr, purrr, tibble …
+library(nnet)        # neural nets
 
+# fast binary log-loss
 fast_logloss <- function(truth, prob1, eps = 1e-15) {
   prob1 <- pmin(pmax(prob1, eps), 1 - eps)
-  y     <- as.numeric(truth) - 1        # factor {0,1} → 0/1
+  y     <- as.numeric(truth) - 1            # factor {0,1} → 0/1
   -mean(y * log(prob1) + (1 - y) * log(1 - prob1))
 }
 
+# scale numeric columns in train, apply same transform to test
 scale_like <- function(train_df, test_df, num_vars) {
-  means <- sapply(train_df[, ..num_vars], mean)
-  sds   <- sapply(train_df[, ..num_vars], sd)
-  train_df[, (num_vars) := Map(function(x, m, s) (x - m)/s, .SD, means, sds),
+  m <- sapply(train_df[, ..num_vars], mean)
+  s <- sapply(train_df[, ..num_vars], sd)
+  train_df[, (num_vars) :=
+             Map(function(x, mu, sd) (x - mu) / sd, .SD, m, s),
            .SDcols = num_vars]
-  test_df [, (num_vars) := Map(function(x, m, s) (x - m)/s, .SD, means, sds),
-           .SDcols = num_vars]
+  test_df[,  (num_vars) :=
+            Map(function(x, mu, sd) (x - mu) / sd, .SD, m, s),
+          .SDcols = num_vars]
   list(train = train_df, test = test_df)
 }
 
-## 1.  Load US-Open men data, drop Speed_MPH == 0 -----------------------------
-path_train <- "out_data/scaled/usopen_subset_m_training.csv"  # 2021–24
-path_test  <- "out_data/scaled/usopen_subset_m_testing.csv"   # 2018–19
+## 1.  Load men’s data, drop zero-speed rows ----------------------------------
+path_train <- "out_data/scaled/usopen_subset_m_training.csv"  # 2021-24
+path_test  <- "out_data/scaled/usopen_subset_m_testing.csv"   # 2018-19
 
 train0 <- as.data.table(fread(path_train))[Speed_MPH > 0]
 test0  <- as.data.table(fread(path_test ))[Speed_MPH > 0]
 
-## 2.  Settings ---------------------------------------------------------------
+colSums(is.na(train0))  # check for NAs
+summary(train0)
+# find all unique values in ServeWidth column
+unique(train0$ServeDepth)  # check factor levels
+
+## 2.  Predictor sets & tuning grid -------------------------------------------
 base_num  <- c("importance_z",
                "p_server_beats_returner_z",
                "ElapsedSeconds_fixed_z",
@@ -208,72 +217,93 @@ base_num  <- c("importance_z",
 vars_fact <- c("ServeWidth", "ServeDepth")
 
 grid_small <- expand_grid(
-  size  = c(3, 5, 7),
-  decay = c(0, 1e-4, 1e-3)
+  size  = c(3, 5, 7),         # hidden-units
+  decay = c(0, 1e-4, 1e-3)    # L2 weight-decay
 )
 
 results <- list()
 
 ## 3.  Loop over serve number & speed variable --------------------------------
-for (speed_var in c("Speed_MPH_z", "speed_ratio_z")) {
-  vars_num <- c(base_num, speed_var)
+for (serve in c(1, 2)) {
+  train_sub <- train0[ServeNumber == serve]
+  test_sub  <- test0 [ServeNumber == serve]
   
-  train_dat <- train_sub[, c(vars_num, vars_fact, "serving_player_won"), with = FALSE]
-  test_dat  <- test_sub [, c(vars_num, vars_fact, "serving_player_won"), with = FALSE]
+  # harmonise factor levels
+  train_sub[, (vars_fact) := lapply(.SD, factor), .SDcols = vars_fact]
+  for (v in vars_fact)
+    test_sub[, (v) := factor(get(v), levels = levels(train_sub[[v]]))]
   
-  ## ---- NEW: remove rows with *any* NA --------------------------------
-  train_dat <- train_dat[complete.cases(train_dat)]
-  test_dat  <- test_dat [complete.cases(test_dat)]
+  # ensure binary factor response
+  train_sub[, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
+  test_sub [, serving_player_won := factor(serving_player_won, levels = c(0, 1))]
   
-  ## If everything vanished, skip this combo
-  if (nrow(train_dat) == 0 || nrow(test_dat) == 0) next
-  
-  ## numeric scaling ----------------------------------------------------
-  scaled <- scale_like(copy(train_dat), copy(test_dat), num_vars = vars_num)
-  train_scaled <- scaled$train
-  test_scaled  <- scaled$test
-  
-  ## ---- [CV tuning block unchanged] -----------------------------------
-  ## … 3-fold CV to pick (size, decay) …
-  
-  ## Fit best model on full subset --------------------------------------
-  nn_fit_final <- nnet(
-    serving_player_won ~ .,
-    data  = train_scaled,
-    size  = best$size,
-    decay = best$decay,
-    maxit = 500,
-    trace = FALSE
-  )
-  
-  ## Evaluate on held-out test set --------------------------------------
-  probs_test <- as.numeric(predict(nn_fit_final, test_scaled, type = "raw"))
-  keep <- !is.na(probs_test)                         # just in case
-  probs_test <- probs_test[keep]
-  truth      <- test_scaled$serving_player_won[keep]
-  
-  if (length(truth) == 0) next                      # no usable rows
-  
-  pred_class <- factor(ifelse(probs_test >= 0.5, 1, 0), levels = c(0, 1))
-  
-  acc <- mean(pred_class == truth)
-  ll  <- fast_logloss(truth, probs_test)
-  
-  ## Record result -------------------------------------------------------
-  results[[length(results) + 1]] <- list(
-    serve_number   = serve,
-    speed_variable = speed_var,
-    hidden_size    = best$size,
-    weight_decay   = best$decay,
-    test_accuracy  = acc,
-    log_loss       = ll
-  )
+  for (speed_var in c("Speed_MPH_z", "speed_ratio_z")) {
+    
+    vars_num <- c(base_num, speed_var)
+    
+    train_dat <- train_sub[, c(vars_num, vars_fact, "serving_player_won"), with = FALSE]
+    test_dat  <- test_sub [, c(vars_num, vars_fact, "serving_player_won"), with = FALSE]
+    
+    # numeric scaling ---------------------------------------------------------
+    scaled <- scale_like(copy(train_dat), copy(test_dat), vars_num)
+    train_scaled <- scaled$train
+    test_scaled  <- scaled$test
+    
+    # 3-fold CV on ≤10 000 rows ----------------------------------------------
+    n_cv   <- min(10000, nrow(train_scaled))
+    cv_idx <- sample(nrow(train_scaled), n_cv)
+    cv_dat <- train_scaled[cv_idx]
+    folds  <- cut(seq_len(n_cv), breaks = 3, labels = FALSE)
+    
+    cv_scores <- grid_small %>% mutate(mean_ll = NA_real_)
+    
+    for (g in seq_len(nrow(grid_small))) {
+      s <- grid_small$size [g]
+      d <- grid_small$decay[g]
+      ll <- numeric(3)
+      
+      for (fold in 1:3) {
+        val  <- which(folds == fold)
+        trn  <- setdiff(seq_len(n_cv), val)
+        
+        nn <- nnet(serving_player_won ~ ., data = cv_dat[trn],
+                   size = s, decay = d, maxit = 200, trace = FALSE)
+        
+        p  <- as.numeric(predict(nn, cv_dat[val], type = "raw"))
+        ll[fold] <- fast_logloss(cv_dat$serving_player_won[val], p)
+      }
+      cv_scores$mean_ll[g] <- mean(ll)
+    }
+    
+    best <- cv_scores %>% slice_min(mean_ll, n = 1)
+    
+    # fit best model on full training subset ---------------------------------
+    nn_final <- nnet(serving_player_won ~ ., data  = train_scaled,
+                     size = best$size, decay = best$decay,
+                     maxit = 500, trace = FALSE)
+    
+    # evaluate on test subset -------------------------------------------------
+    p_test <- as.numeric(predict(nn_final, test_scaled, type = "raw"))
+    cls    <- factor(ifelse(p_test >= 0.5, 1, 0), levels = c(0, 1))
+    
+    acc <- mean(cls == test_scaled$serving_player_won)
+    ll  <- fast_logloss(test_scaled$serving_player_won, p_test)
+    
+    results[[length(results) + 1]] <- list(
+      serve_number   = serve,
+      speed_variable = speed_var,
+      hidden_size    = best$size,
+      weight_decay   = best$decay,
+      test_accuracy  = acc,
+      log_loss       = ll
+    )
+  }
 }
 
-## 4.  Save + display results -------------------------------------------------
-results_df <- bind_rows(results) %>%
-  arrange(serve_number, speed_variable)
+
+
+## 4.  Save & display results -------------------------------------------------
+results_df <- bind_rows(results) %>% arrange(serve_number, speed_variable)
 
 print(results_df)
 write.csv(results_df, "nn_results_usopen_m.csv", row.names = FALSE)
-

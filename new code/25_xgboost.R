@@ -1,15 +1,15 @@
 rm(list = ls())
 
 ## -------- 0. FILE LOCATIONS -------------------------------------------
-path_train_w_m_scaled <- "scaled/wimbledon_m_train_scaled.csv" # 2021–2024 data
-path_train_w_f_scaled <- "scaled/wimbledon_f_train_scaled.csv"
-path_train_u_m_scaled <- "scaled/usopen_m_train_scaled.csv"
-path_train_u_f_scaled <- "scaled/usopen_f_train_scaled.csv"
+path_train_w_m_scaled <- "out_data/scaled/wimbledon_subset_m_training.csv" # 2021–2024 data
+path_train_w_f_scaled <- "out_data/scaled/wimbledon_subset_f_training.csv"
+path_train_u_m_scaled <- "out_data/scaled/usopen_subset_m_training.csv"
+path_train_u_f_scaled <- "out_data/scaled/usopen_subset_f_training.csv"
 
-path_oos_w_m_scaled   <- "scaled/wimbledon_m_test_scaled.csv"  # 2018–2019 data
-path_oos_w_f_scaled   <- "scaled/wimbledon_f_test_scaled.csv"
-path_oos_u_m_scaled   <- "scaled/usopen_m_test_scaled.csv"
-path_oos_u_f_scaled   <- "scaled/usopen_f_test_scaled.csv"
+path_oos_w_m_scaled   <- "out_data/scaled/wimbledon_subset_m_testing.csv"  # 2018–2019 data
+path_oos_w_f_scaled   <- "out_data/scaled/wimbledon_subset_f_testing.csv"
+path_oos_u_m_scaled   <- "out_data/scaled/usopen_subset_m_testing.csv"
+path_oos_u_f_scaled   <- "out_data/scaled/usopen_subset_f_testing.csv"
 
 ## -------- 1. LIBRARIES -------------------------------------------
 library(tidyverse)   # dplyr / readr / ggplot2 / tibble
@@ -22,10 +22,10 @@ library(purrr)
 
 ## -------- 2. READ & PREP TRAINING DATA -------------------------
 train_sets <- list(
-  wimbledon_m = fread(path_train_w_m_scaled),
-  wimbledon_f = fread(path_train_w_f_scaled),
-  usopen_m    = fread(path_train_u_m_scaled),
-  usopen_f    = fread(path_train_u_f_scaled)
+  wimbledon_m = fread(path_train_w_m_scaled)[Speed_MPH > 0],
+  wimbledon_f = fread(path_train_w_f_scaled)[Speed_MPH > 0],
+  usopen_m    = fread(path_train_u_m_scaled)[Speed_MPH > 0],
+  usopen_f    = fread(path_train_u_f_scaled)[Speed_MPH > 0]
 )
 
 # ensure factors are truly factors (and set an explicit level order if you like)
@@ -43,10 +43,11 @@ train_sets <- map(train_sets, ~{
 ## --- update the modeling formula ---
 
 form_speed <- serving_player_won ~
-  p_server_beats_returner +
-  ElapsedSeconds_fixed +
-  importance +
-  Speed_MPH +          # numeric
+  p_server_beats_returner_z +
+  ElapsedSeconds_fixed_z +
+  importance_z +
+  df_pct_server_z +
+  speed_ratio_z +          # numeric
   ServeWidth +           # now factors → one-hot via model.matrix()
   ServeDepth             # same
 
@@ -89,10 +90,10 @@ xgb_uf2 <- xgb.train(params = params, data = dtrain_uf2, nrounds = 100, verbose 
 
 ## -------- 6. READ & PREP TEST DATA -----------------------------
 test_sets <- list(
-  wimbledon_m = fread(path_oos_w_m_scaled),
-  wimbledon_f = fread(path_oos_w_f_scaled),
-  usopen_m    = fread(path_oos_u_m_scaled),
-  usopen_f    = fread(path_oos_u_f_scaled)
+  wimbledon_m = fread(path_oos_w_m_scaled)[Speed_MPH > 0],
+  wimbledon_f = fread(path_oos_w_f_scaled)[Speed_MPH > 0],
+  usopen_m    = fread(path_oos_u_m_scaled)[Speed_MPH > 0],
+  usopen_f    = fread(path_oos_u_f_scaled)[Speed_MPH > 0]
 )
 
 # same for test sets (do this right after you read them in):
@@ -163,4 +164,4 @@ metrics_df <- imap_dfr(
 
 print(metrics_df)
 
-write.csv(metrics_df, "xgb_accuracy_results.csv", row.names = F)
+write.csv(metrics_df, "xgb_accuracy_results_speed_ratio.csv", row.names = F)

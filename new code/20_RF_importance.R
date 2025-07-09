@@ -47,7 +47,7 @@ form_speed <- serving_player_won ~
   ElapsedSeconds_fixed_z +
   importance_z +
   df_pct_server_z +
-  Speed_MPH_z + ## swap out Speed_MPH and speed_ratio as desired 
+  speed_ratio_z + ## swap out Speed_MPH and speed_ratio as desired 
   ServeWidth +           # now factors → one-hot via model.matrix()
   ServeDepth             # same
 
@@ -72,7 +72,7 @@ imp_df <- enframe(rf_mod_m1$variable.importance, name = "variable", value = "imp
   arrange(desc(importance))
 ggplot(imp_df, aes(x = reorder(variable, importance), y = importance)) +
   geom_col() + coord_flip() +
-  labs(title = "RF Variable Importance (using Speed_MPH)\nWimbledon Men — 1st Serve", x = NULL, y = "Importance") +
+  labs(title = "RF Variable Importance (using speed_ratio)\nWimbledon Men — 1st Serve", x = NULL, y = "Importance") +
   theme_minimal()
 
 #################### TEST ####################
@@ -159,4 +159,4 @@ metrics_df <- purrr::imap_dfr(
 
 metrics_df
 
-write.csv(metrics_df, "rf_accuracy_results.csv", row.names = FALSE)
+write.csv(metrics_df, "rf_accuracy_results_speed_ratio.csv", row.names = FALSE)
