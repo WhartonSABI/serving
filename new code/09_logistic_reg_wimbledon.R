@@ -19,6 +19,12 @@ subset_f <- fread("out_data/scaled/wimbledon_subset_f_training.csv")
 
 names(subset_m)
 
+# new column for server name based on PointServer and player1, player2
+subset_m <- subset_m %>%
+  mutate(server_name = if_else(PointServer == 1, player1_name, player2_name))
+subset_f <- subset_f %>%
+  mutate(server_name = if_else(PointServer == 1, player1_name, player2_name))
+
 # --- linear coefficients (no spline) ---
 # --- ---
 
