@@ -9,6 +9,9 @@ library(lme4)
 subset_m <- fread("out_data/scaled/usopen_subset_m_training.csv")
 subset_f <- fread("out_data/scaled/usopen_subset_f_training.csv")
 
+names(subset_m)
+unique(subset_f$year)
+
 # --- Add server_name column ---
 subset_m <- subset_m %>%
   mutate(server_name = if_else(PointServer == 1, player1, player2))
