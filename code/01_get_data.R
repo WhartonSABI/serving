@@ -7,14 +7,15 @@ library(tidyverse)
 
 #-----------------------------------------------------------------------------------------------------
 
-# Helper function to clean one year's data
-process_wimbledon_year <- function(year, raw_path = "../data/raw_data", out_path = "out_data") {
-  # Load data
-  matches_file <- paste0(raw_path, "/", year, "-wimbledon-matches.csv")
-  points_file <- paste0(raw_path, "/", year, "-wimbledon-points.csv")
+# Generalized helper function to clean one year's data for a given tournament
+process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "../data/raw_data", out_path = "out_data") {
+  # Compose file paths
+  matches_file <- paste0(raw_path, "/", year, "-", tournament, "-matches.csv")
+  points_file  <- paste0(raw_path, "/", year, "-", tournament, "-points.csv")
   
+  # Load and clean matches/points data
   matches <- fread(matches_file) %>% select(where(~ all(!is.na(.))))
-  points <- fread(points_file) %>% select(where(~ all(!is.na(.))))
+  points  <- fread(points_file) %>% select(where(~ all(!is.na(.))))
   
   # Merge data
   combined <- left_join(points, matches, by = "match_id")
@@ -25,21 +26,26 @@ process_wimbledon_year <- function(year, raw_path = "../data/raw_data", out_path
     mutate(serving_player_won = ifelse((ServeIndicator == 1 & PointWinner == 1) |
                                          (ServeIndicator == 2 & PointWinner == 2), 1, 0))
   
-  # Save output
-  output_file <- paste0(out_path, "/wimbledon_", year, "_combined.csv")
+  # Write cleaned data
+  output_file <- paste0(out_path, "/", tournament, "_", year, "_combined.csv")
   fwrite(combined, output_file)
   
-  # Optional: print number of removed invalid speed rows
+  # Print summary
   removed <- nrow(points %>% filter(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0))
-  cat("Year", year, "- rows removed due to Speed_MPH == 0 without double fault:", removed, "\n")
+  cat("Tournament:", tournament, "- Year:", year, "- Rows removed due to Speed_MPH == 0 without double fault:", removed, "\n")
 }
 
-# Years to process
+#-----------------------------------------------------------------------------------------------------
+
+# Define years and tournament name
 years <- c(2018, 2019, 2021, 2022, 2023, 2024)
+tournament <- "usopen"  # Change to "usopen" as needed
 
-# Process all years
+# Process all years for the selected tournament
 for (year in years) {
-  process_wimbledon_year(year)
+  process_tournament_year(year, tournament = tournament)
 }
 
-
+# read usopen 2021 to check
+usopen_2021 <- fread("out_data/usopen_2021_combined.csv")
+names(usopen_2021)
