@@ -13,8 +13,8 @@ library(dplyr)
 # subset_f <- fread("usopen_subset_f.csv")
 
 ##
-subset_m <- fread("../data/output/scaled-results/usopen_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/usopen_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/usopen_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/usopen_f_train_scaled.csv")
 
 # --- Helper function to plot model with linear coefs + empirical ---
 plot_linear_model <- function(df, model, speed_col, title, save_path) {

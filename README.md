@@ -11,7 +11,7 @@ This repository contains analysis of tennis serving profiles from Grand Slams to
 │   │   ├── new/
 │   │   └── old/
 │   ├── data/
-│   │   ├── output/
+│   │   ├── processed/
 │   │   │   ├── model-testing-results/
 │   │   │   ├── new-model-results/
 │   │   │   ├── out-data/

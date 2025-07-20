@@ -14,8 +14,8 @@ library(dplyr)
 # subset_f <- fread("wimbledon_f_train.csv")
 
 ##
-subset_m <- fread("../data/output/scaled-results/wimbledon_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/wimbledon_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/wimbledon_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/wimbledon_f_train_scaled.csv")
 
 names(subset_m)
 

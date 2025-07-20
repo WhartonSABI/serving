@@ -31,7 +31,7 @@ add_speed_ratio_column <- function(data) {
 ### 2021 data
 
 # binary variable for whether the point was won by the server
-wimbledon_2021 <- as.data.table(read.csv("../data/output/wimbledon_2021_combined.csv"))
+wimbledon_2021 <- as.data.table(read.csv("../data/processed/wimbledon_2021_combined.csv"))
 names(wimbledon_2021)
 
 #-----------------------------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ wimbledon_2021 <- wimbledon_2021 %>%
 unique_states <- unique(c(wimbledon_2021$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 wimbledon_2021 <- left_join(wimbledon_2021, score_importance_dtmc, by = "state")
 colSums(is.na(wimbledon_2021))
@@ -257,8 +257,8 @@ subset_2021_f <- subset_2021_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2021_m, "../data/output/wimbledon_subset_2021_m.csv", row.names = FALSE)
-write.csv(subset_2021_f, "../data/output/wimbledon_subset_2021_f.csv", row.names = FALSE)
+write.csv(subset_2021_m, "../data/processed/wimbledon_subset_2021_m.csv", row.names = FALSE)
+write.csv(subset_2021_f, "../data/processed/wimbledon_subset_2021_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 

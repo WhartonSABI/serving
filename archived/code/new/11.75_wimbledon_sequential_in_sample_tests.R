@@ -13,8 +13,8 @@ library(yardstick)
 set.seed(123)
 
 # --- Load data ---
-subset_m <- fread("../data/output/scaled-results/wimbledon_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/wimbledon_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/wimbledon_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/wimbledon_f_train_scaled.csv")
 
 # --- Split subsets ---
 m_first <- subset_m[ServeNumber == 1]

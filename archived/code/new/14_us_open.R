@@ -43,7 +43,7 @@ usopen_2021 <- usopen_2021 %>%
 #   filter(PointServer != 0) %>%
 #   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
-write.csv(usopen_2021, "../data/output/usopen_2021_combined.csv", row.names = FALSE)
+write.csv(usopen_2021, "../data/processed/usopen_2021_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ usopen_2022 <- usopen_2022 %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2022, "../data/output/usopen_2022_combined.csv", row.names = FALSE)
+write.csv(usopen_2022, "../data/processed/usopen_2022_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -121,7 +121,7 @@ usopen_2023 <- usopen_2023 %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2023, "../data/output/usopen_2023_combined.csv", row.names = FALSE)
+write.csv(usopen_2023, "../data/processed/usopen_2023_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -160,7 +160,7 @@ usopen_2024 <- usopen_2024 %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2024, "../data/output/usopen_2024_combined.csv", row.names = FALSE)
+write.csv(usopen_2024, "../data/processed/usopen_2024_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -207,7 +207,7 @@ usopen_2024 <- usopen_2024 %>%
 unique_states <- unique(c(usopen_2024$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 usopen_2024 <- left_join(usopen_2024, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2024))
@@ -397,8 +397,8 @@ subset_2024_f <- subset_2024_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2024_m, "../data/output/usopen_subset_2024_m.csv", row.names = FALSE)
-write.csv(subset_2024_f, "../data/output/usopen_subset_2024_f.csv", row.names = FALSE)
+write.csv(subset_2024_m, "../data/processed/usopen_subset_2024_m.csv", row.names = FALSE)
+write.csv(subset_2024_f, "../data/processed/usopen_subset_2024_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------
@@ -424,7 +424,7 @@ usopen_2023 <- usopen_2023 %>%
 unique_states <- unique(c(usopen_2023$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 usopen_2023 <- left_join(usopen_2023, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2023))
@@ -614,8 +614,8 @@ subset_2023_f <- subset_2023_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2023_m, "../data/output/usopen_subset_2023_m.csv", row.names = FALSE)
-write.csv(subset_2023_f, "../data/output/usopen_subset_2023_f.csv", row.names = FALSE)
+write.csv(subset_2023_m, "../data/processed/usopen_subset_2023_m.csv", row.names = FALSE)
+write.csv(subset_2023_f, "../data/processed/usopen_subset_2023_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------
@@ -641,7 +641,7 @@ usopen_2022 <- usopen_2022 %>%
 unique_states <- unique(c(usopen_2022$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 usopen_2022 <- left_join(usopen_2022, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2022))
@@ -831,8 +831,8 @@ subset_2022_f <- subset_2022_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2022_m, "../data/output/usopen_subset_2022_m.csv", row.names = FALSE)
-write.csv(subset_2022_f, "../data/output/usopen_subset_2022_f.csv", row.names = FALSE)
+write.csv(subset_2022_m, "../data/processed/usopen_subset_2022_m.csv", row.names = FALSE)
+write.csv(subset_2022_f, "../data/processed/usopen_subset_2022_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -857,7 +857,7 @@ usopen_2021 <- usopen_2021 %>%
 unique_states <- unique(c(usopen_2021$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 usopen_2021 <- left_join(usopen_2021, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2021))
@@ -1047,8 +1047,8 @@ subset_2021_f <- subset_2021_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2021_m, "../data/output/usopen_subset_2021_m.csv", row.names = FALSE)
-write.csv(subset_2021_f, "../data/output/usopen_subset_2021_f.csv", row.names = FALSE)
+write.csv(subset_2021_m, "../data/processed/usopen_subset_2021_m.csv", row.names = FALSE)
+write.csv(subset_2021_f, "../data/processed/usopen_subset_2021_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 

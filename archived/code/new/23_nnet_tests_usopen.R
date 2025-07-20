@@ -37,10 +37,10 @@ set.seed(42)  # global reproducibility
 
 ############################################################
 ## 1.  Load data --------------------------------------------------------
-paths_train <- list(M = "../data/output/scaled-results/usopen_m_train_scaled.csv",
-                    F = "../data/output/scaled-results/usopen_f_train_scaled.csv")
-paths_test  <- list(M = "../data/output/scaled-results/usopen_subset_m_testing.csv",
-                    F = "../data/output/scaled-results/usopen_subset_f_testing.csv")
+paths_train <- list(M = "../data/processed/scaled-results/usopen_m_train_scaled.csv",
+                    F = "../data/processed/scaled-results/usopen_f_train_scaled.csv")
+paths_test  <- list(M = "../data/processed/scaled-results/usopen_subset_m_testing.csv",
+                    F = "../data/processed/scaled-results/usopen_subset_f_testing.csv")
 
 train_list <- map(paths_train, ~ as.data.table(fread(.x))[Speed_MPH > 0])
 test_list  <- map(paths_test,  ~ as.data.table(fread(.x))[Speed_MPH > 0])
@@ -198,8 +198,8 @@ scale_like <- function(train_df, test_df, num_vars) {
 }
 
 ## 1.  Load men’s data, drop zero-speed rows ----------------------------------
-path_train <- "../data/output/scaled-results/usopen_m_train_scaled.csv"  # 2021-24
-path_test  <- "../data/output/scaled-results/usopen_subset_m_testing.csv"   # 2018-19
+path_train <- "../data/processed/scaled-results/usopen_m_train_scaled.csv"  # 2021-24
+path_test  <- "../data/processed/scaled-results/usopen_subset_m_testing.csv"   # 2018-19
 
 train0 <- as.data.table(fread(path_train))[Speed_MPH > 0]
 test0  <- as.data.table(fread(path_test ))[Speed_MPH > 0]

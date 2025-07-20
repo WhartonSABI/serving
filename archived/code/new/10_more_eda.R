@@ -14,7 +14,7 @@ library(ggplot2)
 
 #-----------------------------------------------------------------------------------------------------
 
-subset_m <- as.data.table(read.csv("../data/output/wimbledon_subset_m.csv"))
+subset_m <- as.data.table(read.csv("../data/processed/wimbledon_subset_m.csv"))
 subset_f <- as.data.table(read.csv("../data/wimbledon_subset_f.csv"))
 
 names(subset_m)

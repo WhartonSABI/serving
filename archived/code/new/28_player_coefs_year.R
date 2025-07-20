@@ -6,8 +6,8 @@ library(lme4)
 library(ggplot2)
 
 # --- Load data ---
-subset_m <- fread("../data/output/scaled-results/wimbledon_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/wimbledon_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/wimbledon_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/wimbledon_f_train_scaled.csv")
 
 # --- Add server_name column ---
 subset_m <- subset_m %>%

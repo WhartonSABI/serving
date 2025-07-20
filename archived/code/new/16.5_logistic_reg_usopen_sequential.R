@@ -13,8 +13,8 @@ library(splines)
 library(broom)       # tidy model output (optional)
 
 ## --- Load Wimbledon training subsets (scaled version you used for modeling)
-subset_m <- fread("../data/output/scaled-results/usopen_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/usopen_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/usopen_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/usopen_f_train_scaled.csv")
 
 ##############################################################################
 ## 1.  PLOTTER (unchanged) ----------------------------------------------------
@@ -235,8 +235,8 @@ library(splines)      # bs()
 library(broom)        # tidy model output (optional)
 
 ## --- Load Wimbledon training subsets (scaled version)
-subset_m <- fread("../data/output/scaled-results/usopen_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/usopen_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/usopen_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/usopen_f_train_scaled.csv")
 
 ##############################################################################
 ## 1.  PLOTTER (unchanged: model may be spline or linear) --------------------

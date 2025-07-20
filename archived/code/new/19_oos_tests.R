@@ -1,15 +1,15 @@
 rm(list=ls())
 
 ## -------- 0. FILE LOCATIONS -------------------------------------------
-path_train_w_m <- "../data/output/scaled-results/wimbledon_m_train_scaled.csv" # 2021-2024 data
-path_train_w_f <- "../data/output/scaled-results/wimbledon_f_train_scaled.csv"
-path_train_u_m <- "../data/output/scaled-results/usopen_m_train_scaled.csv"
-path_train_u_f <- "../data/output/scaled-results/usopen_f_train_scaled.csv"
+path_train_w_m <- "../data/processed/scaled-results/wimbledon_m_train_scaled.csv" # 2021-2024 data
+path_train_w_f <- "../data/processed/scaled-results/wimbledon_f_train_scaled.csv"
+path_train_u_m <- "../data/processed/scaled-results/usopen_m_train_scaled.csv"
+path_train_u_f <- "../data/processed/scaled-results/usopen_f_train_scaled.csv"
 
-path_oos_w_m   <- "../data/output/scaled-results/wimbledon_m_test_scaled.csv" # 2018-2019 data
-path_oos_w_f   <- "../data/output/scaled-results/wimbledon_f_test_scaled.csv"
-path_oos_u_m   <- "../data/output/scaled-results/usopen_subset_m_testing.csv"
-path_oos_u_f   <- "../data/output/scaled-results/usopen_subset_f_testing.csv"
+path_oos_w_m   <- "../data/processed/scaled-results/wimbledon_m_test_scaled.csv" # 2018-2019 data
+path_oos_w_f   <- "../data/processed/scaled-results/wimbledon_f_test_scaled.csv"
+path_oos_u_m   <- "../data/processed/scaled-results/usopen_subset_m_testing.csv"
+path_oos_u_f   <- "../data/processed/scaled-results/usopen_subset_f_testing.csv"
 
 library(tidyverse)   # dplyr / readr / ggplot2 …
 library(data.table)  # fread
@@ -135,8 +135,8 @@ write.csv(oos_results, "oos_results_all_linear.csv")
 rm(list = ls())
 
 ## -------- 0. FILE LOCATIONS -------------------------------------------
-path_train_u_m <- "../data/output/scaled-results/usopen_m_train_scaled.csv"
-path_oos_u_m   <- "../data/output/scaled-results/usopen_subset_m_testing.csv"
+path_train_u_m <- "../data/processed/scaled-results/usopen_m_train_scaled.csv"
+path_oos_u_m   <- "../data/processed/scaled-results/usopen_subset_m_testing.csv"
 
 library(tidyverse)   # dplyr / readr / ggplot2 …
 library(data.table)  # fread

@@ -4,7 +4,7 @@ library(data.table)
 library(splines)
 
 # --- Load & clean data -------------------------------------------------------
-subset_m <- fread("../data/output/wimbledon_subset_m.csv")
+subset_m <- fread("../data/processed/wimbledon_subset_m.csv")
 subset_f <- fread("../data/wimbledon_subset_f.csv")
 
 # remove duplicate column from subset_f

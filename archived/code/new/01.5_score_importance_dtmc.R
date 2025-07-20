@@ -6,20 +6,20 @@ library(data.table)
 
 #-----------------------------------------------------------------------------------------------------
 
-wimbledon_2011 <- as.data.table(read.csv("../data/output/wimbledon_2011_combined.csv"))
-wimbledon_2012 <- as.data.table(read.csv("../data/output/wimbledon_2012_combined.csv"))
-wimbledon_2013 <- as.data.table(read.csv("../data/output/wimbledon_2013_combined.csv"))
-wimbledon_2014 <- as.data.table(read.csv("../data/output/wimbledon_2014_combined.csv"))
-wimbledon_2015 <- as.data.table(read.csv("../data/output/wimbledon_2015_combined.csv"))
-wimbledon_2016 <- as.data.table(read.csv("../data/output/wimbledon_2016_combined.csv"))
-wimbledon_2017 <- as.data.table(read.csv("../data/output/wimbledon_2017_combined.csv"))
-wimbledon_2018 <- as.data.table(read.csv("../data/output/wimbledon_2018_combined.csv"))
-wimbledon_2019 <- as.data.table(read.csv("../data/output/wimbledon_2019_combined.csv"))
+wimbledon_2011 <- as.data.table(read.csv("../data/processed/wimbledon_2011_combined.csv"))
+wimbledon_2012 <- as.data.table(read.csv("../data/processed/wimbledon_2012_combined.csv"))
+wimbledon_2013 <- as.data.table(read.csv("../data/processed/wimbledon_2013_combined.csv"))
+wimbledon_2014 <- as.data.table(read.csv("../data/processed/wimbledon_2014_combined.csv"))
+wimbledon_2015 <- as.data.table(read.csv("../data/processed/wimbledon_2015_combined.csv"))
+wimbledon_2016 <- as.data.table(read.csv("../data/processed/wimbledon_2016_combined.csv"))
+wimbledon_2017 <- as.data.table(read.csv("../data/processed/wimbledon_2017_combined.csv"))
+wimbledon_2018 <- as.data.table(read.csv("../data/processed/wimbledon_2018_combined.csv"))
+wimbledon_2019 <- as.data.table(read.csv("../data/processed/wimbledon_2019_combined.csv"))
 
-wimbledon_2021 <- as.data.table(read.csv("../data/output/wimbledon_2021_combined.csv"))
-wimbledon_2022 <- as.data.table(read.csv("../data/output/wimbledon_2022_combined.csv"))
-wimbledon_2023 <- as.data.table(read.csv("../data/output/wimbledon_2023_combined.csv"))
-wimbledon_2024 <- as.data.table(read.csv("../data/output/wimbledon_2024_combined.csv"))
+wimbledon_2021 <- as.data.table(read.csv("../data/processed/wimbledon_2021_combined.csv"))
+wimbledon_2022 <- as.data.table(read.csv("../data/processed/wimbledon_2022_combined.csv"))
+wimbledon_2023 <- as.data.table(read.csv("../data/processed/wimbledon_2023_combined.csv"))
+wimbledon_2024 <- as.data.table(read.csv("../data/processed/wimbledon_2024_combined.csv"))
 
 names(wimbledon_2015)
 
@@ -129,7 +129,7 @@ importance_df <- df_scores %>%
   mutate(importance = abs(Pwin_TRUE - Pwin_FALSE)) %>%
   arrange(desc(importance))
 
-write.csv(importance_df, "../data/output/score_importance_dtmc.csv", row.names = FALSE)
+write.csv(importance_df, "../data/processed/score_importance_dtmc.csv", row.names = FALSE)
 
 
 #-----------------------------------------------------------------------------------------------------

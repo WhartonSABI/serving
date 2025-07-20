@@ -9,8 +9,8 @@ library(purrr)
 
 #-----------------------------------------------------------------------------------------------------
 
-subset_m <- as.data.table(read.csv("../data/output/wimbledon_subset_m.csv"))
-subset_f <- as.data.table(read.csv("../data/output/wimbledon_subset_f.csv"))
+subset_m <- as.data.table(read.csv("../data/processed/wimbledon_subset_m.csv"))
+subset_f <- as.data.table(read.csv("../data/processed/wimbledon_subset_f.csv"))
 
 colSums(is.na(subset_m))
 
@@ -71,7 +71,7 @@ subset_m_test <- subset_m_test %>%
   filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
          ServeDepth %in% c("CTL", "NCTL"))
 
-write.csv(subset_m_test, "../data/output/wimbledon_subset_m.csv", row.names = FALSE)
+write.csv(subset_m_test, "../data/processed/wimbledon_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -123,4 +123,4 @@ subset_f_test <- subset_f_test %>%
   filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
          ServeDepth %in% c("CTL", "NCTL"))
 
-write.csv(subset_f_test, "../data/output/wimbledon_subset_f.csv", row.names = FALSE)
+write.csv(subset_f_test, "../data/processed/wimbledon_subset_f.csv", row.names = FALSE)

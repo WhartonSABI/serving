@@ -41,7 +41,7 @@ usopen_2018 <- usopen_2018 %>%
 #   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2018, "../data/output/usopen_2018_combined.csv", row.names = FALSE)
+write.csv(usopen_2018, "../data/processed/usopen_2018_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ usopen_2019 <- usopen_2019 %>%
 #   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2019, "../data/output/usopen_2019_combined.csv", row.names = FALSE)
+write.csv(usopen_2019, "../data/processed/usopen_2019_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -125,7 +125,7 @@ usopen_2018 <- usopen_2018 %>%
 unique_states <- unique(c(usopen_2018$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 usopen_2018 <- left_join(usopen_2018, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2018))
@@ -315,8 +315,8 @@ subset_2018_f <- subset_2018_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2018_m, "../data/output/usopen_subset_2018_m.csv", row.names = FALSE)
-write.csv(subset_2018_f, "../data/output/usopen_subset_2018_f.csv", row.names = FALSE)
+write.csv(subset_2018_m, "../data/processed/usopen_subset_2018_m.csv", row.names = FALSE)
+write.csv(subset_2018_f, "../data/processed/usopen_subset_2018_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -341,7 +341,7 @@ usopen_2019 <- usopen_2019 %>%
 unique_states <- unique(c(usopen_2019$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 usopen_2019 <- left_join(usopen_2019, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2019))
@@ -531,8 +531,8 @@ subset_2019_f <- subset_2019_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2019_m, "../data/output/usopen_subset_2019_m.csv", row.names = FALSE)
-write.csv(subset_2019_f, "../data/output/usopen_subset_2019_f.csv", row.names = FALSE)
+write.csv(subset_2019_m, "../data/processed/usopen_subset_2019_m.csv", row.names = FALSE)
+write.csv(subset_2019_f, "../data/processed/usopen_subset_2019_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -652,7 +652,7 @@ subset_m <- subset_m %>%
 setnames(subset_m, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_m, "../data/output/oos_test_usopen_subset_m.csv", row.names = FALSE)
+write.csv(subset_m, "../data/processed/oos_test_usopen_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -673,13 +673,13 @@ subset_f <- subset_f %>%
 setnames(subset_f, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_f, "../data/output/oos_test_usopen_subset_f.csv", row.names = FALSE)
+write.csv(subset_f, "../data/processed/oos_test_usopen_subset_f.csv", row.names = FALSE)
 
 # -----------------------------------------------------------------------------------------------------
 
 ## load 2018 and 2019 wimbledon data, then combine 
-wimbledon_2018 <- as.data.table(read.csv("../data/output/wimbledon_2018_combined.csv"))
-wimbledon_2019 <- as.data.table(read.csv("../data/output/wimbledon_2019_combined.csv"))
+wimbledon_2018 <- as.data.table(read.csv("../data/processed/wimbledon_2018_combined.csv"))
+wimbledon_2019 <- as.data.table(read.csv("../data/processed/wimbledon_2019_combined.csv"))
 
 ### transform 2018 data
 wimbledon_2018 <- wimbledon_2018 %>% 
@@ -701,7 +701,7 @@ wimbledon_2018 <- wimbledon_2018 %>%
 unique_states <- unique(c(wimbledon_2018$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 wimbledon_2018 <- left_join(wimbledon_2018, score_importance_dtmc, by = "state")
 colSums(is.na(wimbledon_2018))
@@ -893,8 +893,8 @@ subset_2018_f <- subset_2018_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2018_m, "../data/output/wimbledon_subset_2018_m.csv", row.names = FALSE)
-write.csv(subset_2018_f, "../data/output/wimbledon_subset_2018_f.csv", row.names = FALSE)
+write.csv(subset_2018_m, "../data/processed/wimbledon_subset_2018_m.csv", row.names = FALSE)
+write.csv(subset_2018_f, "../data/processed/wimbledon_subset_2018_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -919,7 +919,7 @@ wimbledon_2019 <- wimbledon_2019 %>%
 unique_states <- unique(c(wimbledon_2019$state)) 
 length(unique_states) 
 
-score_importance_dtmc <- as.data.table(read.csv("../data/output/score_importance_dtmc.csv"))
+score_importance_dtmc <- as.data.table(read.csv("../data/processed/score_importance_dtmc.csv"))
 
 wimbledon_2019 <- left_join(wimbledon_2019, score_importance_dtmc, by = "state")
 colSums(is.na(wimbledon_2019))
@@ -1109,8 +1109,8 @@ subset_2019_f <- subset_2019_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2019_m, "../data/output/wimbledon_subset_2019_m.csv", row.names = FALSE)
-write.csv(subset_2019_f, "../data/output/wimbledon_subset_2019_f.csv", row.names = FALSE)
+write.csv(subset_2019_m, "../data/processed/wimbledon_subset_2019_m.csv", row.names = FALSE)
+write.csv(subset_2019_f, "../data/processed/wimbledon_subset_2019_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -1190,7 +1190,7 @@ subset_m <- subset_m %>%
 setnames(subset_m, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_m, "../data/output/oos_test_wimbledon_subset_m.csv", row.names = FALSE)
+write.csv(subset_m, "../data/processed/oos_test_wimbledon_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -1211,14 +1211,14 @@ subset_f <- subset_f %>%
 setnames(subset_f, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_f, "../data/output/oos_test_wimbledon_subset_f.csv", row.names = FALSE)
+write.csv(subset_f, "../data/processed/oos_test_wimbledon_subset_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
 ## standardize important cols
 
-subset_m <- as.data.table(read.csv("../data/output/oos_test_wimbledon_subset_m.csv"))
-subset_f <- as.data.table(read.csv("../data/output/oos_test_wimbledon_subset_f.csv"))
+subset_m <- as.data.table(read.csv("../data/processed/oos_test_wimbledon_subset_m.csv"))
+subset_f <- as.data.table(read.csv("../data/processed/oos_test_wimbledon_subset_f.csv"))
 
 # 1) get every player who ever served
 servers <- subset_m %>%
@@ -1333,15 +1333,15 @@ subset_f <- subset_f_test %>%
   )
 
 # write the standardized data to csv
-write.csv(subset_m, "../data/output/scaled-results/wimbledon_m_test_scaled.csv", row.names = FALSE)
-write.csv(subset_f, "../data/output/scaled-results/wimbledon_f_test_scaled.csv", row.names = FALSE)
+write.csv(subset_m, "../data/processed/scaled-results/wimbledon_m_test_scaled.csv", row.names = FALSE)
+write.csv(subset_f, "../data/processed/scaled-results/wimbledon_f_test_scaled.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
 ## usopen: standardize important cols
 
-subset_m <- as.data.table(read.csv("../data/output/oos_test_usopen_subset_m.csv"))
-subset_f <- as.data.table(read.csv("../data/output/oos_test_usopen_subset_f.csv"))
+subset_m <- as.data.table(read.csv("../data/processed/oos_test_usopen_subset_m.csv"))
+subset_f <- as.data.table(read.csv("../data/processed/oos_test_usopen_subset_f.csv"))
 
 # 1) get every player who ever served
 servers <- subset_m %>%
@@ -1457,8 +1457,8 @@ subset_f <- subset_f_test %>%
   )
 
 # write the standardized data to csv
-write.csv(subset_m, "../data/output/scaled-results/usopen_subset_m_testing.csv", row.names = FALSE)
-write.csv(subset_f, "../data/output/scaled-results/usopen_subset_f_testing.csv", row.names = FALSE)
+write.csv(subset_m, "../data/processed/scaled-results/usopen_subset_m_testing.csv", row.names = FALSE)
+write.csv(subset_f, "../data/processed/scaled-results/usopen_subset_f_testing.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 

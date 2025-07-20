@@ -8,8 +8,8 @@ library(splines)
 library(dplyr)
 
 # --- Load data ---
-subset_m <- fread("../data/output/wimbledon_subset_m.csv")
-subset_f <- fread("../data/output/wimbledon_subset_f.csv")
+subset_m <- fread("../data/processed/wimbledon_subset_m.csv")
+subset_f <- fread("../data/processed/wimbledon_subset_f.csv")
 
 names(subset_m)
 

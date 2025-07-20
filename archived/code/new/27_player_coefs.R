@@ -6,8 +6,8 @@ library(lme4)
 
 # --- Load data --- 
 # change wimbledon or usopen as desired
-subset_m <- fread("../data/output/scaled-results/usopen_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/usopen_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/usopen_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/usopen_f_train_scaled.csv")
 
 names(subset_m)
 unique(subset_f$year)
@@ -32,7 +32,7 @@ groups <- list(
 )
 
 # --- Save model summaries to a text file ---
-sink("../data/output/new-model-results/player-effects/usopen_model_summaries.txt")
+sink("../data/processed/new-model-results/player-effects/usopen_model_summaries.txt")
 
 # --- Fit mixed-effects models and print summaries ---
 for (group_name in names(groups)) {
@@ -72,8 +72,8 @@ library(lme4)
 library(ggplot2)
 
 # --- Load data ---
-subset_m <- fread("../data/output/scaled-results/usopen_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/usopen_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/usopen_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/usopen_f_train_scaled.csv")
 
 # --- Add server_name column ---
 subset_m <- subset_m %>%
@@ -186,7 +186,7 @@ player_effects_all <- bind_rows(all_performers)
 View(player_effects_all)
 
 # Optionally save to CSV
-fwrite(player_effects_all, "../data/output/new-model-results/player-effects/usopen_player_random_effects.csv")
+fwrite(player_effects_all, "../data/processed/new-model-results/player-effects/usopen_player_random_effects.csv")
 
 # Assign numeric scores to performance labels
 score_df <- player_effects_all %>%
@@ -209,7 +209,7 @@ player_score_summary <- score_df %>%
 
 # View or save
 View(player_score_summary)
-fwrite(player_score_summary, "../data/output/new-model-results/player-effects/usopen_player_performance_scores.csv")
+fwrite(player_score_summary, "../data/processed/new-model-results/player-effects/usopen_player_performance_scores.csv")
 
 
 # --- use 2 sd's away from mean instead of top/bottom 10---
@@ -225,8 +225,8 @@ library(lme4)
 library(ggplot2)
 
 # --- Load data ---
-subset_m <- fread("../data/output/scaled-results/wimbledon_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/wimbledon_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/wimbledon_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/wimbledon_f_train_scaled.csv")
 
 # --- Add server_name column ---
 subset_m <- subset_m %>%
@@ -346,7 +346,7 @@ player_effects_all <- bind_rows(all_performers)
 View(player_effects_all)
 
 # Save to CSV
-fwrite(player_effects_all, "../data/output/new-model-results/player-effects/wimbledon_player_random_effects.csv")
+fwrite(player_effects_all, "../data/processed/new-model-results/player-effects/wimbledon_player_random_effects.csv")
 
 # --- Assign numeric scores to performance labels ---
 score_df <- player_effects_all %>%
@@ -369,4 +369,4 @@ player_score_summary <- score_df %>%
 
 # View or save
 View(player_score_summary)
-fwrite(player_score_summary, "../data/output/new-model-results/player-effects/wimbledon_player_performance_scores.csv")
+fwrite(player_score_summary, "../data/processed/new-model-results/player-effects/wimbledon_player_performance_scores.csv")

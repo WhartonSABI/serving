@@ -13,8 +13,8 @@ library(yardstick)
 set.seed(123)
 
 # --- Load data ---
-subset_m <- fread("../data/output/scaled-results/wimbledon_m_train_scaled.csv")
-subset_f <- fread("../data/output/scaled-results/wimbledon_f_train_scaled.csv")
+subset_m <- fread("../data/processed/scaled-results/wimbledon_m_train_scaled.csv")
+subset_f <- fread("../data/processed/scaled-results/wimbledon_f_train_scaled.csv")
 
 # --- Split subsets ---
 m_first <- subset_m[ServeNumber == 1]
@@ -83,7 +83,7 @@ results_df <- map_dfr(names(groups), function(g) {
 
 print(results_df)
 
-write.csv(results_df, "../data/output/model-testing-results/results_wimbledon_spline_insample_test.csv", row.names = FALSE)
+write.csv(results_df, "../data/processed/model-testing-results/results_wimbledon_spline_insample_test.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------
 #-----------------------------------------------------------------------
@@ -122,4 +122,4 @@ results_df <- map_dfr(names(groups), function(g) {
 })
 
 print(results_df)
-write.csv(results_df, "../data/output/model-testing-results/results_wimbledon_linear_insample_test.csv", row.names = FALSE)
+write.csv(results_df, "../data/processed/model-testing-results/results_wimbledon_linear_insample_test.csv", row.names = FALSE)

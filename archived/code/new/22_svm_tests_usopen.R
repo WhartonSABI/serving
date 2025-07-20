@@ -8,8 +8,8 @@
 # 
 # ## ---------------------------------------------------------------------
 # 
-# usopen_m_train <- as.data.table(fread("../data/output/scaled-results/usopen_m_train_scaled.csv"))
-# usopen_m_test <- as.data.table(fread("../data/output/scaled-results/usopen_m_test_scaled.csv"))
+# usopen_m_train <- as.data.table(fread("../data/processed/scaled-results/usopen_m_train_scaled.csv"))
+# usopen_m_test <- as.data.table(fread("../data/processed/scaled-results/usopen_m_test_scaled.csv"))
 # 
 # names(usopen_m_train)
 # 
@@ -161,10 +161,10 @@ fast_logloss <- function(truth, prob1, eps = 1e-15) {
 ############################################################
 ## 1.  Load data
 ############################################################
-paths_train <- list(M = "../data/output/scaled-results/usopen_m_train_scaled.csv",
-                    F = "../data/output/scaled-results/usopen_f_train_scaled.csv")
-paths_test  <- list(M = "../data/output/scaled-results/usopen_subset_m_testing.csv",
-                    F = "../data/output/scaled-results/usopen_f_train_scaled.csv")
+paths_train <- list(M = "../data/processed/scaled-results/usopen_m_train_scaled.csv",
+                    F = "../data/processed/scaled-results/usopen_f_train_scaled.csv")
+paths_test  <- list(M = "../data/processed/scaled-results/usopen_subset_m_testing.csv",
+                    F = "../data/processed/scaled-results/usopen_f_train_scaled.csv")
 
 train_list <- map(paths_train, ~ as.data.table(fread(.x))[Speed_MPH > 0])
 test_list  <- map(paths_test,  ~ as.data.table(fread(.x))[Speed_MPH > 0])
