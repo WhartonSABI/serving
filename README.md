@@ -78,7 +78,7 @@ The analysis follows this workflow:
 
 Run scripts from the `code/` directory:
 
-```bash
+```zsh
 cd code
 Rscript 01_get_data.R
 Rscript 02_welo.R
