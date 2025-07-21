@@ -6,7 +6,7 @@ library(ggdendro)
 library(DescTools)
 #################################
 #switch which dataset i'm looking at for when i run the full code
-df = read_csv("wimbledon_subset_2024_f.csv")
+df = read_csv("wimbledon_subset_m_training.csv")
 
 ################################
 #first try! ts is cooked pls ignore
