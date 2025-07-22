@@ -298,3 +298,70 @@ p_scatter <- ggplot(scatter_data, aes(x = metric_score, y = win_rate)) +
 
 ggsave("../data/results/server_quality_models/comparison/server_rf_weighted_vs_winrate.png",
        p_scatter, width = 10, height = 6, bg = "white")
+
+#--------------------------------------------------
+# serve behavior vs. point importance
+#--------------------------------------------------
+
+# --- Add modal_location column to training data ---
+df_clean <- df_clean %>%
+    mutate(modal_location = paste0("W", ServeWidth, "_D", ServeDepth))
+
+# --- Join server quality metric back to point-level training data ---
+df_clean_enriched <- df_clean %>%
+    left_join(combined_results_serve_quality %>% select(ServerName, serve_score_rf_weighted), by = "ServerName") %>%
+    filter(!is.na(serve_score_rf_weighted))
+
+# --- Categorize servers as "High Quality" vs "Low Quality" (median split) ---
+median_quality <- median(df_clean_enriched$serve_score_rf_weighted, na.rm = TRUE)
+df_clean_enriched <- df_clean_enriched %>%
+    mutate(quality_group = if_else(serve_score_rf_weighted >= median_quality, "High Quality", "Low Quality"),
+           importance = factor(importance))
+
+# --- Summarize serve behavior by importance and quality group ---
+importance_summary <- df_clean_enriched %>%
+    group_by(importance, quality_group) %>%
+    summarise(
+        avg_speed = mean(Speed_MPH, na.rm = TRUE),
+        sd_speed = sd(Speed_MPH, na.rm = TRUE),
+        ace_pct = mean(is_ace, na.rm = TRUE),
+        location_entropy = compute_entropy(modal_location),
+        n = n(),
+        .groups = "drop"
+    )
+
+# Boxplot: Average Serve Speed
+p1 <- ggplot(df_clean_enriched, aes(x = importance, y = Speed_MPH, fill = quality_group)) +
+  geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
+  labs(title = "Serve Speed by Point Importance",
+       x = "Importance",
+       y = "Serve Speed (MPH)",
+       fill = "Server Type") +
+  theme_minimal(base_size = 12)
+
+ggsave("../data/results/server_quality_models/importance_behavior/boxplot_speed_by_importance.png", p1, width = 7, height = 5, bg = "white")
+
+# # Boxplot: Ace Percentage (binary so use summarised version per server-point if needed)
+# p2 <- ggplot(df_clean_enriched, aes(x = importance, y = is_ace, fill = quality_group)) +
+#   geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
+#   labs(title = "Ace Probability by Point Importance",
+#        x = "Importance",
+#        y = "Ace (0 or 1)",
+#        fill = "Server Type") +
+#   theme_minimal(base_size = 12)
+# ggsave("../data/results/server_quality_models/importance_behavior/boxplot_ace_by_importance.png", p2, width = 7, height = 5, bg = "white")
+
+# Boxplot: Serve Location Entropy
+# Compute entropy per ServerName, importance, and quality group
+entropy_df <- df_clean_enriched %>%
+  group_by(ServerName, importance, quality_group) %>%
+  summarise(location_entropy = compute_entropy(modal_location), .groups = "drop")
+
+p3 <- ggplot(entropy_df, aes(x = importance, y = location_entropy, fill = quality_group)) +
+  geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
+  labs(title = "Location Entropy by Point Importance",
+       x = "Importance",
+       y = "Entropy",
+       fill = "Server Type") +
+  theme_minimal(base_size = 12)
+ggsave("../data/results/server_quality_models/importance_behavior/boxplot_entropy_by_importance.png", p3, width = 7, height = 5, bg = "white")
