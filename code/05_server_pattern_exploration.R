@@ -1,6 +1,5 @@
 # --- Setup ---
 rm(list = ls())
-# install.packages("pheatmap")
 library(tidyverse)
 library(data.table)
 library(cluster)
@@ -32,28 +31,10 @@ get_mode <- function(x) {
     ux[which.max(tabulate(match(x, ux)))]
 }
 
-df_clean_modal_locations <- df_clean %>% 
-    filter(ServeNumber == 1) %>% 
-    group_by(ServerName) %>% 
-    summarise(
-        modal_location = get_mode(location_bin),
-        .groups = 'drop'
-    )
-unique(df_clean_modal_locations$modal_location)
-
-df_clean_modal_locations2 <- df_clean %>% 
-    filter(ServeNumber == 2) %>% 
-    group_by(ServerName) %>% 
-    summarise(
-        modal_location = get_mode(location_bin),
-        .groups = 'drop'
-    )
-unique(df_clean_modal_locations2$modal_location)
-
 # --- Create player-level serve profiles ---
 get_serve_profiles <- function(df, serve_number_label) {
     df %>%
-        filter(ServeNumber == serve_number_label) %>%
+        filter(ServeNumber %in% serve_number_label) %>%
         group_by(ServerName) %>%
         summarise(
             avg_speed = mean(Speed_MPH, na.rm = TRUE),
@@ -89,12 +70,10 @@ run_clustering_models <- function(profiles_df, tag) {
     # Identify modal_location one-hot columns (they start with "modal_location_")
     modal_cols <- grep("^modal_location_", colnames(df_scaled), value = TRUE)
     
-    # Down-weight modal location variables (adjust factor as needed)
+    # Down-weight modal location variables
     df_scaled[, modal_cols] <- df_scaled[, modal_cols] * 0.6
     
-    # --------------------
-    # Elbow plot for K
-    # --------------------
+    # --- Elbow Plot ---
     wss <- map_dbl(1:10, function(k) {
         kmeans(df_scaled, centers = k, nstart = 20)$tot.withinss
     })
@@ -110,25 +89,20 @@ run_clustering_models <- function(profiles_df, tag) {
     ggsave(paste0("../data/results/clustering/", tag, "_elbow_plot.png"), p_elbow, 
            width = 6, height = 4, bg = "white")
     
-    # --------------------
-    # K-means clustering (k = 4)
-    # --------------------
+    # --- K-means Clustering ---
     set.seed(123)
     kmeans_res <- kmeans(df_scaled, centers = 4, nstart = 25)
     kmeans_labels <- as.factor(kmeans_res$cluster)
     
-    # Save cluster summary
     profiles_kmeans <- profiles_df %>%
         mutate(cluster = kmeans_labels)
     
-    # --- Modal location proportions per cluster (K-means) ---
     modal_props_kmeans <- profiles_kmeans %>%
         group_by(cluster, modal_location) %>%
         summarise(n = n(), .groups = "drop") %>%
         group_by(cluster) %>%
         mutate(prop = n / sum(n)) %>%
         pivot_wider(names_from = modal_location, values_from = prop, values_fill = 0)
-    
     write.csv(modal_props_kmeans, paste0("../data/results/clustering/", tag, "_kmeans_modal_location_props.csv"), row.names = FALSE)
     
     cluster_summary_kmeans <- profiles_kmeans %>%
@@ -163,9 +137,7 @@ run_clustering_models <- function(profiles_df, tag) {
              width = 8,
              height = 6)
     
-    # --------------------
-    # Hierarchical clustering
-    # --------------------
+    # --- Hierarchical clustering ---
     hc_dist <- dist(df_scaled)
     hc <- hclust(hc_dist, method = "ward.D2")
     hc_labels <- cutree(hc, k = 4)
@@ -173,14 +145,12 @@ run_clustering_models <- function(profiles_df, tag) {
     profiles_hc <- profiles_df %>%
         mutate(cluster = as.factor(hc_labels))
     
-    # --- Modal location proportions per cluster (Hierarchical) ---
     modal_props_hc <- profiles_hc %>%
         group_by(cluster, modal_location) %>%
         summarise(n = n(), .groups = "drop") %>%
         group_by(cluster) %>%
         mutate(prop = n / sum(n)) %>%
         pivot_wider(names_from = modal_location, values_from = prop, values_fill = 0)
-    
     write.csv(modal_props_hc, paste0("../data/results/clustering/", tag, "_hierarchical_modal_location_props.csv"), row.names = FALSE)
     
     cluster_summary_hc <- profiles_hc %>%
@@ -194,10 +164,11 @@ run_clustering_models <- function(profiles_df, tag) {
     dev.off()
 }
 
-# --- Run for both serve types ---
-first_profiles <- get_serve_profiles(df_clean, 1)
-second_profiles <- get_serve_profiles(df_clean, 2)
+# --- Run for first, second, and combined serve types ---
+first_profiles   <- get_serve_profiles(df_clean, 1)
+second_profiles  <- get_serve_profiles(df_clean, 2)
+combined_profiles <- get_serve_profiles(df_clean, c(1, 2))
 
 run_clustering_models(first_profiles, "first_serves")
 run_clustering_models(second_profiles, "second_serves")
-
+run_clustering_models(combined_profiles, "combined_serves")
