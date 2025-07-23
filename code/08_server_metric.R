@@ -2,24 +2,16 @@
 rm(list = ls())
 library(tidyverse)
 library(data.table)
-library(cluster)
-library(factoextra)
 library(recipes)
-library(pheatmap)
 library(randomForest)
-library(scales)
 library(ggrepel)
-library(gridExtra)
+library(scales)
 library(ggplot2)
 
 # --- Helper functions ---
 compute_entropy <- function(x) {
     p <- prop.table(table(x))
     -sum(p * log2(p))
-}
-get_mode <- function(x) {
-    ux <- unique(x)
-    ux[which.max(tabulate(match(x, ux)))]
 }
 
 get_serve_profiles <- function(df, serve_numbers) {
@@ -29,116 +21,75 @@ get_serve_profiles <- function(df, serve_numbers) {
         summarise(
             avg_speed = mean(Speed_MPH, na.rm = TRUE),
             sd_speed = sd(Speed_MPH, na.rm = TRUE),
-            win_rate = mean(PointWinner == ServeIndicator, na.rm = TRUE),
             ace_pct = mean(is_ace, na.rm = TRUE),
             location_entropy = compute_entropy(location_bin),
+            win_rate = mean(PointWinner == ServeIndicator, na.rm = TRUE),
             n_serves = n(),
             .groups = "drop"
         ) %>%
         filter(n_serves > 20)
 }
 
-run_pipeline <- function(df_clean, serve_label, output_dir) {
+run_pipeline_models <- function(df_clean, serve_label, output_dir) {
+    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     set.seed(42)
+    
     profiles <- get_serve_profiles(df_clean, serve_label)
+    X <- profiles %>% select(avg_speed, sd_speed, ace_pct, location_entropy)
+    y <- profiles$win_rate
     
-    # Create and scale model data
-    model_data <- profiles %>% select(-win_rate, -n_serves)
-    recipe_obj <- recipe(~ ., data = model_data) %>%
-        update_role(ServerName, new_role = "id") %>%
-        step_center(all_numeric_predictors()) %>%
-        step_scale(all_numeric_predictors()) %>%
-        prep()
+    # --- Linear Regression ---
+    df_model <- cbind(win_rate = y, X)
+    df_model <- as.data.frame(df_model)
     
-    df_encoded <- bake(recipe_obj, new_data = NULL) %>%
-        select(-ServerName) %>%
-        bind_cols(win_rate = profiles$win_rate,
-                  ServerName = profiles$ServerName,
-                  n_serves = profiles$n_serves)
+    lm_model <- lm(win_rate ~ ., data = df_model)
+    pred_lm <- predict(lm_model, newdata = X)
+    resid_lm <- y - pred_lm
     
-    df_model <- df_encoded %>%
-        column_to_rownames("ServerName") %>%
-        select(-n_serves)
+    # --- Logistic Regression ---
+    glm_model <- glm(win_rate > 0.5 ~ ., data = df_model, family = "binomial")
+    pred_glm <- predict(glm_model, newdata = X, type = "response")
+    resid_glm <- y - pred_glm
     
-    # Random forest
-    rf <- randomForest(win_rate ~ ., data = df_model, importance = TRUE)
-    imp <- importance(rf, type = 1)
-    imp_sorted <- sort(imp[, 1], decreasing = TRUE)
-    rf_weights <- imp_sorted / sum(imp_sorted)
-    serve_score_rf <- predict(rf, newdata = df_model)
+    # --- Random Forest ---
+    rf_model <- randomForest(win_rate ~ ., data = df_model, importance = TRUE)
+    pred_rf <- predict(rf_model, newdata = X)
+    resid_rf <- y - pred_rf
     
-    features <- names(rf_weights)
-    df_model_scaled <- df_model %>%
-        select(-win_rate) %>%
-        mutate(across(all_of(features), ~ rescale(.x, to = c(0, 1)), .names = "rescaled_{.col}"))
+    rf_importance <- importance(rf_model, type = 1)
+    imp_df <- data.frame(Variable = rownames(rf_importance), Importance = rf_importance[, 1])
+    rf_weights <- imp_df$Importance / sum(imp_df$Importance)
+    names(rf_weights) <- imp_df$Variable
     
-    weighted_score <- df_model_scaled %>%
-        rowwise() %>%
-        mutate(serve_score_rf_weighted = sum(c_across(starts_with("rescaled_")) * rf_weights[features])) %>%
-        ungroup() %>%
-        mutate(ServerName = rownames(df_model),
-               serve_score_rf = serve_score_rf[rownames(df_model)]) %>%
-        select(ServerName, serve_score_rf, serve_score_rf_weighted)
+    # --- Baseline weighted score using RF importance ---
+    X_scaled <- as.data.frame(scale(X))
+    baseline_score <- rowSums(t(t(X_scaled) * rf_weights[colnames(X_scaled)]))
     
-    # Linear model and overperformance
-    lm_model <- lm(win_rate ~ ace_pct + avg_speed + sd_speed + location_entropy, data = profiles)
-    profiles$expected_win_rate <- predict(lm_model, newdata = profiles)
-    profiles$overperformance <- profiles$win_rate - profiles$expected_win_rate
-    
-    # Output full combined dataset
-    output_df <- bind_cols(
-        weighted_score,
-        profiles %>% select(-win_rate, -n_serves),
-        win_rate = profiles$win_rate,
-        expected_win_rate = profiles$expected_win_rate,
-        overperformance = profiles$overperformance,
-        n_serves = profiles$n_serves
+    ggsave(
+        paste0(output_dir, "/rf_importance.png"),
+        ggplot(imp_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+            geom_col(fill = "steelblue") + coord_flip() +
+            theme_minimal(base_size = 12) +
+            labs(title = "Random Forest Variable Importance", x = "", y = "Importance"),
+        width = 7, height = 5, bg = "white"
     )
     
-    write.csv(output_df, paste0(output_dir, "/server_quality.csv"), row.names = FALSE)
-    
-    # Clustering
-    set.seed(42)
-    kfit <- kmeans(df_model %>% select(-win_rate), centers = 3, nstart = 25)
-    clustered <- df_model %>%
-        select(-win_rate) %>%
-        mutate(cluster = factor(kfit$cluster),
-               ServerName = rownames(df_model)) %>%
-        pivot_longer(cols = -c(cluster, ServerName), names_to = "Feature", values_to = "Value")
-    
-    p_feat <- ggplot(clustered, aes(x = cluster, y = Value, fill = cluster)) +
-        geom_boxplot(outlier.size = 0.5) +
-        facet_wrap(~ Feature, scales = "free", ncol = 3) +
-        theme_minimal(base_size = 12) +
-        theme(legend.position = "none") +
-        labs(title = "Feature Distributions by Cluster", x = "Cluster", y = "Standardized Value")
-    ggsave(paste0(output_dir, "/feature_distributions_by_cluster.png"), p_feat, width = 10, height = 8, bg = "white")
-    
-    # RF importance plot
-    imp_df <- data.frame(Variable = rownames(imp), Importance = imp[, 1])
-    p_imp <- ggplot(imp_df, aes(x = reorder(Variable, Importance), y = Importance)) +
-        geom_col(fill = "steelblue") +
-        coord_flip() +
-        theme_minimal(base_size = 12) +
-        labs(title = "Random Forest Variable Importance", x = "Feature", y = "Importance")
-    ggsave(paste0(output_dir, "/rf_variable_importance.png"), p_imp, width = 7, height = 5, bg = "white")
-    
-    # Overperformance plot
-    p_over <- ggplot(profiles, aes(x = expected_win_rate, y = win_rate)) +
-        geom_point(aes(color = overperformance), size = 2.5) +
-        geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
-        geom_text_repel(data = subset(profiles, abs(overperformance) > 0.05),
-                        aes(label = ServerName), size = 3) +
-        scale_color_gradient2(low = "red", high = "green", mid = "gray90", midpoint = 0) +
-        theme_minimal(base_size = 12) +
-        labs(title = "Serve Overperformance vs Expected Win Rate",
-             x = "Expected Win Rate", y = "Actual Win Rate", color = "Overperformance")
-    ggsave(paste0(output_dir, "/serve_overperformance_plot.png"), p_over, width = 8, height = 6, bg = "white")
-    
-    return(list(serve_quality = output_df %>% rownames_to_column("ServerName")))
+    # --- Save combined dataset ---
+    profiles_extended <- profiles %>%
+        mutate(
+            overperf_lm = resid_lm,
+            overperf_glm = resid_glm,
+            overperf_rf = resid_rf,
+            pred_lm = pred_lm,
+            pred_glm = pred_glm,
+            pred_rf = pred_rf,
+            rf_weighted_baseline = baseline_score
+        )
+    write.csv(profiles_extended, paste0(output_dir, "/serve_quality_all_models.csv"), row.names = FALSE)
+    return(list(profiles = profiles_extended))
 }
 
-# --- Run pipelines ---
+# --- Load training data ---
 df_train <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
 df_clean <- df_train %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
@@ -149,11 +100,11 @@ df_clean <- df_train %>%
         is_ace = if_else(ServeIndicator == 1, P1Ace, P2Ace)
     )
 
-first_results <- run_pipeline(df_clean, 1, "../data/results/server_quality_models/first_serve")
-second_results <- run_pipeline(df_clean, 2, "../data/results/server_quality_models/second_serve")
-combined_results <- run_pipeline(df_clean, c(1, 2), "../data/results/server_quality_models/combined")
+first_results <- run_pipeline_models(df_clean, 1, "../data/results/server_quality_models/first_serve")
+second_results <- run_pipeline_models(df_clean, 2, "../data/results/server_quality_models/second_serve")
+combined_results <- run_pipeline_models(df_clean, c(1, 2), "../data/results/server_quality_models/combined")
 
-# --- Load and clean testing data ---
+# --- Load test set ---
 df_test <- fread("../data/processed/scaled/wimbledon_subset_m_testing.csv")
 df_test_clean <- df_test %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
@@ -164,143 +115,113 @@ df_test_clean <- df_test %>%
     )
 
 # --- Evaluation ---
-evaluate_on_test <- function(test_df, metric_df, metric_col) {
-    test_df <- test_df %>%
-        mutate(ServerName = tolower(trimws(ServerName)))
-    
+evaluate_model_metric <- function(test_df, model_df, metric_col) {
     df <- test_df %>%
-        inner_join(metric_df %>% select(ServerName, !!sym(metric_col)), by = "ServerName")
-    
-    if (nrow(df) == 0) {
-        return(tibble(cor_metric_vs_winrate = NA, avg_actual_win_rate = NA, avg_metric_score = NA, n_players = 0))
-    }
-    
-    df %>%
+        inner_join(model_df %>% select(ServerName, !!sym(metric_col)), by = "ServerName") %>%
         group_by(ServerName) %>%
         summarise(actual_win_rate = mean(won_point), metric_score = first(!!sym(metric_col)), .groups = "drop") %>%
         summarise(
-            cor_metric_vs_winrate = cor(actual_win_rate, metric_score, use = "complete.obs"),
-            avg_actual_win_rate = mean(actual_win_rate),
-            avg_metric_score = mean(metric_score),
-            n_players = n()
+            cor = cor(actual_win_rate, metric_score, use = "complete.obs"),
+            avg_actual = mean(actual_win_rate),
+            avg_metric = mean(metric_score),
+            n = n()
         )
+    return(df)
 }
 
-first_results_serve_quality <- first_results$serve_quality %>% 
-    select(-ServerName) %>% 
-    rename(ServerName = `ServerName...1`,
-           expected_win_rate = `expected_win_rate...9`,
-           overperformance = `overperformance...10`) %>% 
-    select(ServerName, serve_score_rf, serve_score_rf_weighted, avg_speed, sd_speed,
-           ace_pct, location_entropy, expected_win_rate, overperformance, win_rate, n_serves)
+save_evals <- function(name, model_df) {
+    metrics <- c("overperf_lm", "overperf_glm", "overperf_rf", "rf_weighted_baseline")
+    out <- lapply(metrics, function(m) evaluate_model_metric(df_test_clean, model_df, m) %>% mutate(Model = m))
+    result <- bind_rows(out) %>% mutate(Data = name)
+    write.csv(result, paste0("../data/results/server_quality_models/comparison/test_eval_", name, ".csv"), row.names = FALSE)
+    return(result)
+}
 
-second_results_serve_quality <- second_results$serve_quality %>% 
-    select(-ServerName) %>% 
-    rename(ServerName = `ServerName...1`,
-           expected_win_rate = `expected_win_rate...9`,
-           overperformance = `overperformance...10`) %>% 
-    select(ServerName, serve_score_rf, serve_score_rf_weighted, avg_speed, sd_speed,
-           ace_pct, location_entropy, expected_win_rate, overperformance, win_rate, n_serves)
+eval_first <- save_evals("first", first_results$profiles)
+eval_second <- save_evals("second", second_results$profiles)
+eval_combined <- save_evals("combined", combined_results$profiles)
 
-combined_results_serve_quality <- combined_results$serve_quality %>% 
-    select(-ServerName) %>% 
-    rename(ServerName = `ServerName...1`,
-           expected_win_rate = `expected_win_rate...9`,
-           overperformance = `overperformance...10`) %>% 
-    select(ServerName, serve_score_rf, serve_score_rf_weighted, avg_speed, sd_speed,
-           ace_pct, location_entropy, expected_win_rate, overperformance, win_rate, n_serves)
-
-
-first_eval <- evaluate_on_test(df_test_clean, first_results_serve_quality, "overperformance")
-second_eval <- evaluate_on_test(df_test_clean, second_results_serve_quality, "overperformance")
-combined_eval <- evaluate_on_test(df_test_clean, combined_results_serve_quality, "overperformance")
-
-comparison <- bind_rows(
-    first_eval %>% mutate(Method = "First Serve"),
-    second_eval %>% mutate(Method = "Second Serve"),
-    combined_eval %>% mutate(Method = "Combined")
-)
-
-write.csv(comparison, "../data/results/server_quality_models/comparison/compare_all_overlap_test_performance.csv", row.names = FALSE)
-print(comparison)
-
-# --- Scatterplot ---
-get_scatter_data <- function(test_df, metric_df, metric_col, label) {
-    test_df <- test_df %>%
-        mutate(ServerName = tolower(trimws(ServerName)))
+# --- Scatter plots ---
+plot_scatter <- function(model_df, label) {
+    models <- c("LM" = "overperf_lm", "GLM" = "overperf_glm", "RF" = "overperf_rf", "Baseline" = "rf_weighted_baseline")
     
-    test_df %>%
-        inner_join(metric_df %>% select(ServerName, !!sym(metric_col)), by = "ServerName") %>%
-        group_by(ServerName) %>%
-        summarise(win_rate = mean(won_point), metric_score = first(!!sym(metric_col)), .groups = "drop") %>%
-        mutate(Model = label)
+    # Combined scatter plot with color by model
+    scatter_data <- bind_rows(
+        imap(models, ~ model_df %>%
+                 inner_join(df_test_clean, by = "ServerName") %>%
+                 group_by(ServerName) %>%
+                 summarise(
+                     win_rate = mean(won_point),
+                     metric_score = first(!!sym(.x)),
+                     Model = .y,
+                     .groups = "drop"
+                 ))
+    )
+    
+    p <- ggplot(scatter_data, aes(x = metric_score, y = win_rate, color = Model)) +
+        geom_point(size = 2) +
+        geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+        theme_minimal(base_size = 12) +
+        labs(title = paste(label, "- Overperformance vs Actual Win Rate"),
+             x = "Predicted Metric Score", y = "Actual Win Rate")
+    
+    ggsave(paste0("../data/results/server_quality_models/comparison/scatter_", tolower(label), ".png"),
+           p, width = 10, height = 6, bg = "white")
+    
+    # Individual plots for each model with red/green shading based on regression line
+    for (m in names(models)) {
+        var <- models[m]
+        data <- model_df %>%
+            inner_join(df_test_clean, by = "ServerName") %>%
+            group_by(ServerName) %>%
+            summarise(
+                win_rate = mean(won_point),
+                metric_score = mean(!!sym(var)),  # use mean for robustness
+                label = first(ServerName),
+                .groups = "drop"
+            )
+        
+        # Fit least squares regression line
+        fit <- lm(win_rate ~ metric_score, data = data)
+        data <- data %>%
+            mutate(predicted = predict(fit),
+                   residual = win_rate - predicted,
+                   above_line = residual > 0)
+        
+        p_individual <- ggplot(data, aes(x = metric_score, y = win_rate)) +
+            geom_line(aes(x = metric_score, y = predicted), linetype = "dotted", color = "black") +
+            geom_point(aes(color = above_line, alpha = abs(residual)), size = 2.5) +
+            scale_color_manual(values = c("red", "darkgreen")) +
+            geom_text_repel(
+                aes(label = ifelse(abs(residual) > 0.05, label, "")),
+                size = 3,
+                max.overlaps = Inf
+            ) +
+            theme_minimal(base_size = 12) +
+            labs(
+                title = paste(label, "-", m, "Model"),
+                x = "Predicted Score (Model-Based)",
+                y = "Actual Win Rate"
+            )
+        
+        ggsave(paste0("../data/results/server_quality_models/comparison/scatter_", tolower(label), "_", tolower(m), ".png"),
+               p_individual, width = 9, height = 6, bg = "white")
+    }
 }
 
-df_first <- get_scatter_data(df_test_clean, first_results_serve_quality, "overperformance", "First Serve")
-df_second <- get_scatter_data(df_test_clean, second_results_serve_quality, "overperformance", "Second Serve")
-df_combined <- get_scatter_data(df_test_clean, combined_results_serve_quality, "overperformance", "Combined")
-
-scatter_data <- bind_rows(df_first, df_second, df_combined)
-
-p_scatter <- ggplot(scatter_data, aes(x = metric_score, y = win_rate)) +
-    geom_point(color = "steelblue", size = 2) +
-    geom_smooth(method = "lm", se = FALSE, color = "darkred", linetype = "dashed") +
-    # geom_text_repel(data = subset(scatter_data, abs(win_rate - metric_score) > 0.1),
-    #                 aes(label = ServerName), size = 3) +
-    facet_wrap(~ Model) +
-    theme_minimal(base_size = 12) +
-    labs(
-        title = "Overperformance Metric vs Actual Win Rate (Test Set)",
-        x = "Overperformance (Train)",
-        y = "Actual Win Rate"
-    )
-
-ggsave("../data/results/server_quality_models/comparison/server_overperformance_vs_winrate.png",
-       p_scatter, width = 10, height = 6, bg = "white")
+# --- Generate plots for each grouping ---
+plot_scatter(first_results$profiles, "First Serve")
+plot_scatter(second_results$profiles, "Second Serve")
+plot_scatter(combined_results$profiles, "Combined")
 
 
-#---------------------------------------------
-# same testing but using rf weighted server quality instead of based on overperformance from model
-#---------------------------------------------
-
-first_eval <- evaluate_on_test(df_test_clean, first_results_serve_quality, "serve_score_rf_weighted")
-second_eval <- evaluate_on_test(df_test_clean, second_results_serve_quality, "serve_score_rf_weighted")
-combined_eval <- evaluate_on_test(df_test_clean, combined_results_serve_quality, "serve_score_rf_weighted")
-
-comparison <- bind_rows(
-    first_eval %>% mutate(Method = "First Serve"),
-    second_eval %>% mutate(Method = "Second Serve"),
-    combined_eval %>% mutate(Method = "Combined")
-)
-
-write.csv(comparison, "../data/results/server_quality_models/comparison/compare_all_overlap_test_rf_weighted.csv", row.names = FALSE)
-print(comparison)
-
-# --- Scatterplot ---
-df_first <- get_scatter_data(df_test_clean, first_results_serve_quality, "serve_score_rf_weighted", "First Serve")
-df_second <- get_scatter_data(df_test_clean, second_results_serve_quality, "serve_score_rf_weighted", "Second Serve")
-df_combined <- get_scatter_data(df_test_clean, combined_results_serve_quality, "serve_score_rf_weighted", "Combined")
-
-scatter_data <- bind_rows(df_first, df_second, df_combined)
-
-p_scatter <- ggplot(scatter_data, aes(x = metric_score, y = win_rate)) +
-    geom_point(color = "steelblue", size = 2) +
-    geom_smooth(method = "lm", se = FALSE, color = "darkred", linetype = "dashed") +
-    # geom_text_repel(data = subset(scatter_data, abs(win_rate - metric_score) > 0.1),
-    #                 aes(label = ServerName), size = 3) +
-    facet_wrap(~ Model) +
-    theme_minimal(base_size = 12) +
-    labs(
-        title = "Weighted Server Quality (weights from RF) vs Actual Win Rate (Test Set)",
-        x = "Weighted Server Quality",
-        y = "Actual Win Rate"
-    )
-
-ggsave("../data/results/server_quality_models/comparison/server_rf_weighted_vs_winrate.png",
-       p_scatter, width = 10, height = 6, bg = "white")
 
 #--------------------------------------------------
-# serve behavior vs. point importance
+# serve behavior vs. point importance based on server quality metric
+# note: this isn't in code 9 b/c we need server quality metric to do this
+# but i think now there's datasets in data/results/server_quality_models that have server quality metrics
+# so we can work on moving this bottom code to script 9?
+# this code also needs some work but will tackle in future
 #--------------------------------------------------
 
 # --- Add modal_location column to training data ---
@@ -309,14 +230,16 @@ df_clean <- df_clean %>%
 
 # --- Join server quality metric back to point-level training data ---
 df_clean_enriched <- df_clean %>%
-    left_join(combined_results_serve_quality %>% select(ServerName, serve_score_rf_weighted), by = "ServerName") %>%
-    filter(!is.na(serve_score_rf_weighted))
+    left_join(combined_results$profiles %>% select(ServerName, rf_weighted_baseline), by = "ServerName") %>%
+    filter(!is.na(rf_weighted_baseline))
 
 # --- Categorize servers as "High Quality" vs "Low Quality" (median split) ---
-median_quality <- median(df_clean_enriched$serve_score_rf_weighted, na.rm = TRUE)
+median_quality <- median(df_clean_enriched$rf_weighted_baseline, na.rm = TRUE)
 df_clean_enriched <- df_clean_enriched %>%
-    mutate(quality_group = if_else(serve_score_rf_weighted >= median_quality, "High Quality", "Low Quality"),
-           importance = factor(importance))
+    mutate(
+        quality_group = if_else(rf_weighted_baseline >= median_quality, "High Quality", "Low Quality"),
+        importance = factor(importance)
+    )
 
 # --- Summarize serve behavior by importance and quality group ---
 importance_summary <- df_clean_enriched %>%
@@ -330,38 +253,30 @@ importance_summary <- df_clean_enriched %>%
         .groups = "drop"
     )
 
-# Boxplot: Average Serve Speed
+# --- Boxplot: Average Serve Speed ---
 p1 <- ggplot(df_clean_enriched, aes(x = importance, y = Speed_MPH, fill = quality_group)) +
-  geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
-  labs(title = "Serve Speed by Point Importance",
-       x = "Importance",
-       y = "Serve Speed (MPH)",
-       fill = "Server Type") +
-  theme_minimal(base_size = 12)
+    geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
+    labs(title = "Serve Speed by Point Importance",
+         x = "Importance",
+         y = "Serve Speed (MPH)",
+         fill = "Server Type") +
+    theme_minimal(base_size = 12)
 
-ggsave("../data/results/server_quality_models/importance_behavior/boxplot_speed_by_importance.png", p1, width = 7, height = 5, bg = "white")
+ggsave("../data/results/server_quality_models/importance_behavior/boxplot_speed_by_importance.png", p1,
+       width = 7, height = 5, bg = "white")
 
-# # Boxplot: Ace Percentage (binary so use summarised version per server-point if needed)
-# p2 <- ggplot(df_clean_enriched, aes(x = importance, y = is_ace, fill = quality_group)) +
-#   geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
-#   labs(title = "Ace Probability by Point Importance",
-#        x = "Importance",
-#        y = "Ace (0 or 1)",
-#        fill = "Server Type") +
-#   theme_minimal(base_size = 12)
-# ggsave("../data/results/server_quality_models/importance_behavior/boxplot_ace_by_importance.png", p2, width = 7, height = 5, bg = "white")
-
-# Boxplot: Serve Location Entropy
-# Compute entropy per ServerName, importance, and quality group
+# --- Boxplot: Serve Location Entropy ---
 entropy_df <- df_clean_enriched %>%
-  group_by(ServerName, importance, quality_group) %>%
-  summarise(location_entropy = compute_entropy(modal_location), .groups = "drop")
+    group_by(ServerName, importance, quality_group) %>%
+    summarise(location_entropy = compute_entropy(modal_location), .groups = "drop")
 
 p3 <- ggplot(entropy_df, aes(x = importance, y = location_entropy, fill = quality_group)) +
-  geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
-  labs(title = "Location Entropy by Point Importance",
-       x = "Importance",
-       y = "Entropy",
-       fill = "Server Type") +
-  theme_minimal(base_size = 12)
-ggsave("../data/results/server_quality_models/importance_behavior/boxplot_entropy_by_importance.png", p3, width = 7, height = 5, bg = "white")
+    geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
+    labs(title = "Location Entropy by Point Importance",
+         x = "Importance",
+         y = "Entropy",
+         fill = "Server Type") +
+    theme_minimal(base_size = 12)
+
+ggsave("../data/results/server_quality_models/importance_behavior/boxplot_entropy_by_importance.png", p3,
+       width = 7, height = 5, bg = "white")
