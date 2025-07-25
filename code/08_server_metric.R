@@ -107,7 +107,7 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
 }
 
 # --- Load & Prepare Training Data ---
-df_train <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
+df_train <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
 df_clean <- df_train %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
@@ -123,7 +123,7 @@ second_results <- run_pipeline_models(df_clean, 2, "../data/results/server_quali
 combined_results <- run_pipeline_models(df_clean, c(1, 2), "../data/results/server_quality_models/combined")
 
 # --- Load Test Data ---
-df_test <- fread("../data/processed/scaled/wimbledon_subset_m_testing.csv")
+df_test <- fread("../data/processed/scaled/usopen_subset_m_testing.csv")
 df_test_clean <- df_test %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
@@ -224,3 +224,90 @@ plot_scatter <- function(model_df, label) {
 plot_scatter(first_results$profiles, "First Serve")
 plot_scatter(second_results$profiles, "Second Serve")
 plot_scatter(combined_results$profiles, "Combined")
+
+#--------------------------------------------------
+# Analyze Serve Behavior vs. Score State (Ordered by Mean Importance)
+#--------------------------------------------------
+
+# --- Add modal_location column ---
+df_clean <- df_clean %>%
+    mutate(modal_location = paste0("W", ServeWidth, "_D", ServeDepth))
+
+# --- Join server quality metric ---
+df_clean_enriched <- df_clean %>%
+    left_join(combined_results$profiles %>%
+                  select(ServerName, serve_score_rf_weighted = rf_weighted_baseline),
+              by = "ServerName") %>%
+    filter(!is.na(serve_score_rf_weighted))
+
+# --- Categorize servers by quality ---
+median_quality <- median(df_clean_enriched$serve_score_rf_weighted, na.rm = TRUE)
+df_clean_enriched <- df_clean_enriched %>%
+    mutate(quality_group = if_else(serve_score_rf_weighted >= median_quality, "High Quality", "Low Quality"))
+
+# --- Order score states by increasing mean importance ---
+state_order <- df_clean_enriched %>%
+    group_by(state) %>%
+    summarise(mean_importance = mean(importance, na.rm = TRUE), .groups = "drop") %>%
+    arrange(mean_importance) %>%
+    pull(state)
+
+df_clean_enriched <- df_clean_enriched %>%
+    mutate(state = factor(state, levels = state_order))
+
+# --- Create output directory ---
+importance_dir <- "../data/results/server_quality_models/importance_behavior"
+dir.create(importance_dir, recursive = TRUE, showWarnings = FALSE)
+
+# --- Boxplot: Serve Speed ---
+p_speed <- ggplot(df_clean_enriched, aes(x = state, y = Speed_MPH, fill = quality_group)) +
+    geom_boxplot(outlier.size = 0.5, alpha = 0.75) +
+    labs(
+        title = "Serve Speed by Score State (Ordered by Increasing Importance)",
+        x = "Score State",
+        y = "Serve Speed (MPH)",
+        fill = "Server Type"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(file.path(importance_dir, "boxplot_speed_by_state.png"),
+       p_speed, width = 9, height = 5.5, bg = "white")
+
+# --- Boxplot: Ace Percentage ---
+ace_pct_df <- df_clean_enriched %>%
+    group_by(ServerName, state, quality_group) %>%
+    summarise(ace_pct = mean(is_ace, na.rm = TRUE), .groups = "drop")
+
+p_ace <- ggplot(ace_pct_df, aes(x = state, y = ace_pct, fill = quality_group)) +
+    geom_boxplot(outlier.size = 0.5, alpha = 0.75) +
+    labs(
+        title = "Ace Percentage by Score State (Ordered by Increasing Importance)",
+        x = "Score State",
+        y = "Ace Percentage",
+        fill = "Server Type"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(file.path(importance_dir, "boxplot_acepct_by_state.png"),
+       p_ace, width = 9, height = 5.5, bg = "white")
+
+# --- Boxplot: Serve Location Entropy ---
+entropy_df <- df_clean_enriched %>%
+    group_by(ServerName, state, quality_group) %>%
+    summarise(location_entropy = compute_entropy(modal_location), .groups = "drop")
+
+p_entropy <- ggplot(entropy_df, aes(x = state, y = location_entropy, fill = quality_group)) +
+    geom_boxplot(outlier.size = 0.5, alpha = 0.75) +
+    labs(
+        title = "Serve Location Entropy by Score State (Ordered by Increasing Importance)",
+        x = "Score State",
+        y = "Serve Location Entropy",
+        fill = "Server Type"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(file.path(importance_dir, "boxplot_entropy_by_state.png"),
+       p_entropy, width = 9, height = 5.5, bg = "white")
