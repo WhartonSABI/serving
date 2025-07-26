@@ -3,6 +3,7 @@ rm(list = ls())
 library(tidyverse)
 library(data.table)
 library(recipes)
+library(caret)
 library(randomForest)
 library(ggrepel)
 library(scales)
@@ -35,68 +36,43 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     set.seed(42)
     
-    # --- Prepare profiles ---
     profiles <- get_serve_profiles(df_clean, serve_label)
     X <- profiles %>% select(avg_speed, sd_speed, location_entropy)
     y <- profiles$serve_efficiency
-    y_binary <- as.integer(y > median(y, na.rm = TRUE))
     
-    # --- Standardize for linear + logistic ---
     X_scaled <- as.data.frame(scale(X))
-    df_model_scaled <- cbind(serve_efficiency = y, is_above_median = y_binary, X_scaled)
-    df_model <- cbind(serve_efficiency = y, X)
+    df_model_scaled <- cbind(serve_efficiency = y, X_scaled)
     
-    # --- Linear Regression ---
-    lm_model <- lm(serve_efficiency ~ ., data = df_model_scaled %>% select(-is_above_median))
-    pred_lm <- predict(lm_model, newdata = X_scaled)
+    # CV control
+    cv_ctrl <- trainControl(method = "cv", number = 5, savePredictions = "final")
+    
+    # Linear Regression
+    lm_model <- train(serve_efficiency ~ ., data = df_model_scaled, method = "lm", trControl = cv_ctrl)
+    pred_lm <- lm_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_lm <- y - pred_lm
     
-    # --- Logistic Regression ---
-    glm_model <- glm(is_above_median ~ ., data = df_model_scaled %>% select(-serve_efficiency), family = "binomial")
-    pred_glm <- predict(glm_model, newdata = X_scaled, type = "response")
-    resid_glm <- y_binary - pred_glm
-    
-    # --- Random Forest Regression ---
-    rf_model <- randomForest(serve_efficiency ~ ., data = df_model, importance = TRUE)
-    pred_rf <- predict(rf_model, newdata = X)
+    # Random Forest
+    rf_model <- train(serve_efficiency ~ ., data = df_model_scaled, method = "rf", importance = TRUE, trControl = cv_ctrl)
+    pred_rf <- rf_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_rf <- y - pred_rf
     
-    # --- XGBoost Regression ---
-    dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = y)
-    xgb_model <- xgboost::xgboost(
-        data = dtrain,
-        nrounds = 100,
-        objective = "reg:squarederror",
-        verbose = 0
-    )
-    pred_xgb <- predict(xgb_model, newdata = as.matrix(X))
-    resid_xgb <- y - pred_xgb
-    
-    # --- RF Variable Importance ---
-    rf_importance <- importance(rf_model, type = 1)
-    imp_df <- data.frame(Variable = rownames(rf_importance), Importance = rf_importance[, 1])
-    rf_weights <- imp_df$Importance / sum(imp_df$Importance)
-    names(rf_weights) <- imp_df$Variable
+    rf_importance <- varImp(rf_model)$importance
+    rf_weights <- rf_importance$Overall / sum(rf_importance$Overall)
+    names(rf_weights) <- rownames(rf_importance)
     baseline_score <- rowSums(t(t(X_scaled) * rf_weights[colnames(X_scaled)]))
     
-    ggsave(
-        paste0(output_dir, "/rf_importance.png"),
-        ggplot(imp_df, aes(x = reorder(Variable, Importance), y = Importance)) +
-            geom_col(fill = "steelblue") + coord_flip() +
-            theme_minimal(base_size = 12) +
-            labs(title = "Random Forest Variable Importance", x = "", y = "Importance"),
-        width = 7, height = 5, bg = "white"
-    )
+    # XGBoost
+    xgb_grid <- expand.grid(nrounds = 100, max_depth = 3, eta = 0.1, gamma = 0, colsample_bytree = 1, min_child_weight = 1, subsample = 1)
+    xgb_model <- train(serve_efficiency ~ ., data = df_model_scaled, method = "xgbTree", tuneGrid = xgb_grid, trControl = cv_ctrl, verbose = 0)
+    pred_xgb <- xgb_model$pred %>% arrange(rowIndex) %>% pull(pred)
+    resid_xgb <- y - pred_xgb
     
-    # --- Combine and return ---
     profiles_extended <- profiles %>%
         mutate(
             overperf_lm = resid_lm,
-            overperf_glm = resid_glm,
             overperf_rf = resid_rf,
             overperf_xgb = resid_xgb,
             pred_lm = pred_lm,
-            pred_glm = pred_glm,
             pred_rf = pred_rf,
             pred_xgb = pred_xgb,
             rf_weighted_baseline = baseline_score
@@ -104,6 +80,24 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     
     write.csv(profiles_extended, paste0(output_dir, "/serve_quality_all_models.csv"), row.names = FALSE)
     return(list(profiles = profiles_extended))
+    
+    # --- Save Random Forest Variable Importance Plot ---
+    importance_df <- rf_importance %>%
+        rownames_to_column("Variable") %>%
+        arrange(desc(Overall))
+    
+    p_importance <- ggplot(importance_df, aes(x = reorder(Variable, Overall), y = Overall)) +
+        geom_col(fill = "steelblue") +
+        coord_flip() +
+        labs(
+            title = "Random Forest Variable Importance",
+            x = "Variable",
+            y = "Importance Score"
+        ) +
+        theme_minimal(base_size = 13)
+    
+    ggsave(file.path(output_dir, "rf_variable_importance.png"),
+           p_importance, width = 7, height = 5.5, bg = "white")
 }
 
 # --- Load & Prepare Training Data ---
@@ -138,7 +132,11 @@ evaluate_model_metric <- function(test_df, model_df, metric_col) {
     df <- test_df %>%
         inner_join(model_df %>% select(ServerName, !!sym(metric_col)), by = "ServerName") %>%
         group_by(ServerName) %>%
-        summarise(actual_serve_efficiency = mean(efficient_serve), metric_score = first(!!sym(metric_col)), .groups = "drop") %>%
+        summarise(
+            actual_serve_efficiency = mean(efficient_serve),
+            metric_score = first(!!sym(metric_col)),
+            .groups = "drop"
+        ) %>%
         summarise(
             cor = cor(actual_serve_efficiency, metric_score, use = "complete.obs"),
             avg_metric = mean(metric_score),
@@ -148,7 +146,7 @@ evaluate_model_metric <- function(test_df, model_df, metric_col) {
 }
 
 save_evals <- function(name, model_df) {
-    metrics <- c("overperf_lm", "overperf_glm", "overperf_rf", "overperf_xgb", "rf_weighted_baseline")
+    metrics <- c("overperf_lm", "overperf_rf", "overperf_xgb", "rf_weighted_baseline")
     out <- lapply(metrics, function(m) evaluate_model_metric(df_test_clean, model_df, m) %>% mutate(Model = m))
     result <- bind_rows(out) %>% mutate(Data = name)
     write.csv(result, paste0("../data/results/server_quality_models/comparison/test_eval_", name, ".csv"), row.names = FALSE)
@@ -161,8 +159,7 @@ eval_combined <- save_evals("combined", combined_results$profiles)
 
 # --- Scatterplots ---
 plot_scatter <- function(model_df, label) {
-    models <- c("LM" = "overperf_lm", "GLM" = "overperf_glm", "RF" = "overperf_rf",
-                "XGB" = "overperf_xgb", "Baseline" = "rf_weighted_baseline")
+    models <- c("LM" = "overperf_lm", "RF" = "overperf_rf", "XGB" = "overperf_xgb", "Baseline" = "rf_weighted_baseline")
     
     scatter_data <- bind_rows(
         imap(models, ~ model_df %>%
