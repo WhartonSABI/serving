@@ -8,7 +8,7 @@ library(recipes)
 library(pheatmap)
 
 # --- Load Data ---
-df <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
+df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
 
 # --- Clean and prepare ---
 df_clean <- df %>%
@@ -140,6 +140,8 @@ run_clustering_models <- function(profiles_df, tag) {
     profiles_hc <- profiles_df %>%
         mutate(cluster = as.factor(hc_labels))
     
+    write.csv(profiles_hc, paste0("../data/results/clustering/", tag, "_hierarchical_cluster_assignments.csv"), row.names = FALSE)
+    
     modal_props_hc <- profiles_hc %>%
         group_by(cluster, modal_location) %>%
         summarise(n = n(), .groups = "drop") %>%
@@ -173,3 +175,83 @@ combined_profiles_kmeans <- run_clustering_models(combined_profiles, "combined_s
 write.csv(first_profiles_kmeans, "../data/results/clustering/first_serves_kmeans_cluster_assignments.csv", row.names = FALSE)
 write.csv(second_profiles_kmeans, "../data/results/clustering/second_serves_kmeans_cluster_assignments.csv", row.names = FALSE)
 write.csv(combined_profiles_kmeans, "../data/results/clustering/combined_serves_kmeans_cluster_assignments.csv", row.names = FALSE)
+
+#--------------------------------------------------
+# --- Additional Visualizations for Each Method ---
+#--------------------------------------------------
+
+
+plot_cluster_boxplots <- function(profiles, method_name, tag) {
+    features <- c("avg_speed", "sd_speed", "ace_pct", "location_entropy")
+    for (feat in features) {
+        p <- ggplot(profiles, aes_string(x = "factor(cluster)", y = feat, fill = "factor(cluster)")) +
+            geom_boxplot(alpha = 0.7) +
+            theme_minimal() +
+            labs(
+                title = paste(method_name, "–", feat, "by Cluster –", tag),
+                x = "Cluster", y = feat
+            ) +
+            theme(legend.position = "none")
+        
+        ggsave(
+            paste0("../data/results/clustering/", tag, "_", method_name, "_boxplot_", feat, ".png"),
+            p, width = 6, height = 4, bg = "white"
+        )
+    }
+}
+
+plot_modal_location_barplot <- function(modal_props_df, method_name, tag) {
+    # Remove non-location columns (e.g., "n") except "cluster"
+    modal_clean <- modal_props_df %>%
+        select(where(~ is.numeric(.) || is.factor(.))) %>%
+        select(-any_of("n"))  # drop "n" if it exists
+    
+    # Convert to long format for stacked bar plot
+    df_long <- modal_clean %>%
+        pivot_longer(-cluster, names_to = "location", values_to = "prop") %>%
+        mutate(cluster = factor(cluster))
+    
+    # Plot
+    p <- ggplot(df_long, aes(x = cluster, y = prop, fill = location)) +
+        geom_col(position = "stack", color = "white") +
+        theme_minimal() +
+        labs(
+            title = paste(method_name, "Modal Serve Location Proportions –", tag),
+            x = "Cluster", y = "Proportion",
+            fill = "Modal Location"
+        ) +
+        theme(legend.position = "right")
+    
+    # Save to file
+    ggsave(
+        paste0("../data/results/clustering/", tag, "_", method_name, "_modal_location_barplot.png"),
+        p, width = 8, height = 5, bg = "white"
+    )
+}
+
+
+# --- Final Visualizations for All Serve Types and Both Clustering Methods ---
+
+serve_tags <- c("first_serves", "second_serves", "combined_serves")
+
+for (tag in serve_tags) {
+    # --- Load player-level cluster assignments ---
+    kmeans_profiles <- fread(paste0("../data/results/clustering/", tag, "_kmeans_cluster_assignments.csv")) %>%
+        mutate(cluster = as.factor(cluster))
+    
+    hc_profiles <- fread(paste0("../data/results/clustering/", tag, "_hierarchical_cluster_assignments.csv")) %>%
+        mutate(cluster = as.factor(cluster))
+    
+    # --- Load modal location proportion tables ---
+    modal_kmeans <- fread(paste0("../data/results/clustering/", tag, "_kmeans_modal_location_props.csv"))
+    modal_hc     <- fread(paste0("../data/results/clustering/", tag, "_hierarchical_modal_location_props.csv"))
+    
+    # --- Plot boxplots for each cluster method ---
+    plot_cluster_boxplots(kmeans_profiles, "kmeans", tag)
+    plot_cluster_boxplots(hc_profiles, "hierarchical", tag)
+    
+    # --- Plot heatmaps of modal serve location ---
+    plot_modal_location_barplot(modal_kmeans, "kmeans", tag)
+    plot_modal_location_barplot(modal_hc, "hierarchical", tag)
+}
+
