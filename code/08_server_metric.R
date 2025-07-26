@@ -107,7 +107,7 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
 }
 
 # --- Load & Prepare Training Data ---
-df_train <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
+df_train <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
 df_clean <- df_train %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
@@ -123,13 +123,14 @@ second_results <- run_pipeline_models(df_clean, 2, "../data/results/server_quali
 combined_results <- run_pipeline_models(df_clean, c(1, 2), "../data/results/server_quality_models/combined")
 
 # --- Load Test Data ---
-df_test <- fread("../data/processed/scaled/usopen_subset_m_testing.csv")
+df_test <- fread("../data/processed/scaled/wimbledon_subset_m_testing.csv")
 df_test_clean <- df_test %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
     mutate(
         ServerName = tolower(if_else(ServeIndicator == 1, player1, player2)),
-        won_point = PointWinner == ServeIndicator
+        won_point = PointWinner == ServeIndicator,
+        efficient_serve = (PointWinner == ServeIndicator) & (RallyCount <= 3)
     )
 
 # --- Evaluation ---
@@ -137,9 +138,9 @@ evaluate_model_metric <- function(test_df, model_df, metric_col) {
     df <- test_df %>%
         inner_join(model_df %>% select(ServerName, !!sym(metric_col)), by = "ServerName") %>%
         group_by(ServerName) %>%
-        summarise(actual_win_rate = mean(won_point), metric_score = first(!!sym(metric_col)), .groups = "drop") %>%
+        summarise(actual_serve_efficiency = mean(efficient_serve), metric_score = first(!!sym(metric_col)), .groups = "drop") %>%
         summarise(
-            cor = cor(actual_win_rate, metric_score, use = "complete.obs"),
+            cor = cor(actual_serve_efficiency, metric_score, use = "complete.obs"),
             avg_metric = mean(metric_score),
             n = n()
         )
