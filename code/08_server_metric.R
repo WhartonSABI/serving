@@ -13,7 +13,7 @@ library(pheatmap)
 library(viridis)
 
 # --- Config ---
-outcome_var <- "serve_efficiency"  # "serve_efficiency" or "win_rate"
+outcome_var <- "win_rate"  # "serve_efficiency" or "win_rate"
 
 # --- Helper Functions ---
 compute_entropy <- function(x) {
@@ -129,7 +129,7 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
 }
 
 # --- Load & Prepare Training Data ---
-df_train <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
+df_train <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
 df_clean <- df_train %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
@@ -148,7 +148,7 @@ second_results  <- run_pipeline_models(df_clean, 2, "../data/results/server_qual
 combined_results <- run_pipeline_models(df_clean, c(1, 2), "../data/results/server_quality_models/combined")
 
 # --- Load Test Data ---
-df_test <- fread("../data/processed/scaled/wimbledon_subset_m_testing.csv")
+df_test <- fread("../data/processed/scaled/usopen_subset_m_testing.csv")
 df_test_clean <- df_test %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
