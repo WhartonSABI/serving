@@ -183,22 +183,29 @@ write.csv(combined_profiles_kmeans, "../data/results/clustering/combined_serves_
 
 plot_cluster_boxplots <- function(profiles, method_name, tag) {
     features <- c("avg_speed", "sd_speed", "ace_pct", "location_entropy")
-    for (feat in features) {
-        p <- ggplot(profiles, aes_string(x = "factor(cluster)", y = feat, fill = "factor(cluster)")) +
-            geom_boxplot(alpha = 0.7) +
-            theme_minimal() +
-            labs(
-                title = paste(method_name, "–", feat, "by Cluster –", tag),
-                x = "Cluster", y = feat
-            ) +
-            theme(legend.position = "none")
-        
-        ggsave(
-            paste0("../data/results/clustering/", tag, "_", method_name, "_boxplot_", feat, ".png"),
-            p, width = 6, height = 4, bg = "white"
-        )
-    }
+    
+    df_long <- profiles %>%
+        select(cluster, all_of(features)) %>%
+        pivot_longer(cols = all_of(features), names_to = "feature", values_to = "value") %>%
+        mutate(cluster = factor(cluster),
+               feature = factor(feature, levels = features))  # preserve order
+    
+    p <- ggplot(df_long, aes(x = cluster, y = value, fill = cluster)) +
+        geom_boxplot(alpha = 0.7) +
+        facet_wrap(~ feature, scales = "free_y") +
+        theme_minimal() +
+        labs(
+            title = paste(method_name, "– Clustered Feature Distributions –", tag),
+            x = "Cluster", y = "Value"
+        ) +
+        theme(legend.position = "none")
+    
+    ggsave(
+        paste0("../data/results/clustering/", tag, "_", method_name, "_boxplots_facet.png"),
+        p, width = 10, height = 6, bg = "white"
+    )
 }
+
 
 plot_modal_location_barplot <- function(modal_props_df, method_name, tag) {
     # Remove non-location columns (e.g., "n") except "cluster"
