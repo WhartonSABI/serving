@@ -13,7 +13,7 @@ library(pheatmap)
 library(viridis)
 
 # --- Config ---
-outcome_var <- "win_rate"  # "serve_efficiency" or "win_rate"
+outcome_var <- "serve_efficiency"  # "serve_efficiency" or "win_rate"
 
 # --- Helper Functions ---
 compute_entropy <- function(x) {
@@ -101,6 +101,24 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     resid_rf <- y - pred_rf
     
     rf_importance <- varImp(rf_model)$importance
+    
+    # Save RF variable importance plot
+    rf_importance_df <- rf_importance %>%
+        rownames_to_column(var = "Variable") %>%
+        arrange(desc(Overall))
+    
+    rf_imp_plot <- ggplot(rf_importance_df, aes(x = reorder(Variable, Overall), y = Overall)) +
+        geom_col(fill = "steelblue") +
+        coord_flip() +
+        labs(title = paste0("Random Forest Variable Importance (", outcome_var, ")"),
+             x = "Variable", y = "Importance") +
+        theme_minimal(base_size = 12)
+    
+    ggsave(
+        file.path(output_dir, paste0("rf_importance_", outcome_var, ".png")),
+        rf_imp_plot, width = 8, height = 6, bg = "white"
+    )
+    
     rf_weights <- rf_importance$Overall
     names(rf_weights) <- rownames(rf_importance)
     rf_weights <- rf_weights / sum(rf_weights, na.rm = TRUE)
