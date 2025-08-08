@@ -11,13 +11,14 @@ library(ggplot2)
 library(xgboost)
 library(pheatmap)
 library(viridis)
+library(broom)
 
 #-----------------------------
 # --- Config ---
 #-----------------------------
 outcome_var <- "win_rate"  # "serve_efficiency" or "win_rate"
 gender <- "m"                      # "m" or "f"
-tournament <- "wimbledon"          # "wimbledon" or "usopen"
+tournament <- "usopen"          # "wimbledon" or "usopen"
 
 #-----------------------------
 # --- Derived Tags and Paths ---
@@ -105,60 +106,89 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     profiles <- get_serve_profiles(df_clean, serve_label)
     y <- profiles[[outcome_var]]
     X <- profiles %>% select(-ServerName, -all_of(outcome_var))
-    df_model_scaled <- data.frame(X)
+    
+    X_scaled <- scale(X)
+    df_model_scaled <- data.frame(X_scaled)
     df_model_scaled[[outcome_var]] <- y
     df_model_scaled <- df_model_scaled %>% relocate(all_of(outcome_var))
     
     cv_ctrl <- trainControl(method = "cv", number = 5, savePredictions = "final")
     
+    # --- Linear Model ---
     lm_model <- train(reformulate(colnames(X), response = outcome_var), data = df_model_scaled, method = "lm", trControl = cv_ctrl)
     pred_lm <- lm_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_lm <- y - pred_lm
+    std_pred_lm <- scale(pred_lm)[,1]
+    std_resid_lm <- scale(resid_lm)[,1]
+    performance_lm <- std_pred_lm + std_resid_lm
     
+    # Save LM coefficients
+    tidy_lm <- tidy(lm_model$finalModel)
+    write.csv(tidy_lm, file.path(output_dir, paste0("lm_coefficients_", outcome_var, ".csv")), row.names = FALSE)
+    
+    # --- Random Forest Model ---
     rf_model <- train(reformulate(colnames(X), response = outcome_var), data = df_model_scaled, method = "rf", importance = TRUE, trControl = cv_ctrl)
     pred_rf <- rf_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_rf <- y - pred_rf
+    std_pred_rf <- scale(pred_rf)[,1]
+    std_resid_rf <- scale(resid_rf)[,1]
+    performance_rf <- std_pred_rf + std_resid_rf
     
+    # RF importance
     rf_importance <- varImp(rf_model)$importance %>%
         rownames_to_column(var = "Variable") %>%
         arrange(desc(Overall))
+    write.csv(rf_importance, file.path(output_dir, paste0("rf_importance_", outcome_var, ".csv")), row.names = FALSE)
     
-    # Save RF variable importance plot
     rf_plot <- ggplot(rf_importance, aes(x = reorder(Variable, Overall), y = Overall)) +
         geom_col(fill = "steelblue") +
         coord_flip() +
-        labs(title = paste0("Random Forest Variable Importance (", outcome_var, ")"),
-             x = "Variable", y = "Importance") +
+        labs(title = paste0("Random Forest Variable Importance (", outcome_var, ")"), x = "Variable", y = "Importance") +
         theme_minimal(base_size = 12)
+    ggsave(file.path(output_dir, paste0("rf_importance_", outcome_var, ".png")), rf_plot, width = 8, height = 6, bg = "white")
     
-    ggsave(file.path(output_dir, paste0("rf_importance_", outcome_var, ".png")),
-           rf_plot, width = 8, height = 6, bg = "white")
-    
-    # Compute weighted average
+    # Compute RF-weighted average
     rf_weights <- rf_importance$Overall
     names(rf_weights) <- rf_importance$Variable
     rf_weights <- rf_weights / sum(rf_weights, na.rm = TRUE)
     common_vars <- intersect(names(rf_weights), colnames(X))
     weighted_avg <- rowSums(t(t(X[, common_vars, drop = FALSE]) * rf_weights[common_vars]))
     
+    # --- XGBoost Model ---
     xgb_grid <- expand.grid(nrounds = 100, max_depth = 3, eta = 0.1, gamma = 0,
                             colsample_bytree = 1, min_child_weight = 1, subsample = 1)
     xgb_model <- train(reformulate(colnames(X), response = outcome_var), data = df_model_scaled, method = "xgbTree",
                        tuneGrid = xgb_grid, trControl = cv_ctrl, verbose = 0)
     pred_xgb <- xgb_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_xgb <- y - pred_xgb
+    std_pred_xgb <- scale(pred_xgb)[,1]
+    std_resid_xgb <- scale(resid_xgb)[,1]
+    performance_xgb <- std_pred_xgb + std_resid_xgb
     
+    # Save XGBoost importance
+    xgb_imp <- xgb.importance(model = xgb_model$finalModel)
+    write.csv(xgb_imp, file.path(output_dir, paste0("xgb_importance_", outcome_var, ".csv")), row.names = FALSE)
+    
+    xgb_plot <- ggplot(xgb_imp, aes(x = reorder(Feature, Gain), y = Gain)) +
+        geom_col(fill = "darkorange") +
+        coord_flip() +
+        labs(title = paste0("XGBoost Variable Importance (", outcome_var, ")"), x = "Variable", y = "Gain") +
+        theme_minimal(base_size = 12)
+    ggsave(file.path(output_dir, paste0("xgb_importance_", outcome_var, ".png")), xgb_plot, width = 8, height = 6, bg = "white")
+    
+    # helper function to scale metrics between -1 and 1 (for interpretability)
     rescale_signed <- function(x) {
         max_abs <- max(abs(x), na.rm = TRUE)
         if (max_abs == 0) return(rep(0, length(x)))
         return(x / max_abs)
     }
     
+    # --- Output Combined ---
     profiles_extended <- profiles %>%
         mutate(
-            overperf_lm = rescale_signed(resid_lm),
-            overperf_rf = rescale_signed(resid_rf),
-            overperf_xgb = rescale_signed(resid_xgb),
+            performance_lm = rescale_signed(performance_lm),
+            performance_rf = rescale_signed(performance_rf),
+            performance_xgb = rescale_signed(performance_xgb),
             pred_lm = pred_lm,
             pred_rf = pred_rf,
             pred_xgb = pred_xgb,
@@ -213,7 +243,7 @@ evaluate_welo_baseline <- function(df_train, df_test, serve_numbers, model_name)
 }
 
 save_evals <- function(name, model_df, df_test_clean, df_train_clean, serve_numbers) {
-    metrics <- c("overperf_lm", "overperf_rf", "overperf_xgb", "weighted_avg")
+    metrics <- c("performance_lm", "performance_rf", "performance_xgb", "weighted_avg")
     out <- lapply(metrics, function(m) evaluate_model_metric(df_test_clean, model_df, m) %>% mutate(Model = m))
     result <- bind_rows(out) %>% mutate(Data = name)
     
@@ -240,15 +270,18 @@ plot_scatter_models <- function(df_test_clean, model_df, df_train_clean, serve_n
         summarise(actual = mean(!!sym(outcome_var), na.rm = TRUE), .groups = "drop")
     
     all_df <- actual_df %>%
-        inner_join(model_df %>% select(ServerName, overperf_lm, overperf_rf, overperf_xgb, weighted_avg), by = "ServerName") %>%
+        inner_join(model_df %>% select(ServerName, performance_lm, performance_rf, performance_xgb, weighted_avg), by = "ServerName") %>%
         inner_join(train_welo_df, by = "ServerName")
     
-    all_df_std <- all_df %>%
-        mutate(across(c(actual, overperf_lm, overperf_rf, overperf_xgb, weighted_avg, avg_welo), scale)) %>%
+    all_df <- all_df %>%
+        mutate(
+            actual = scale(actual)[, 1],
+            avg_welo = scale(avg_welo)[, 1]
+        ) %>%
         rename(
-            LM = overperf_lm,
-            RF = overperf_rf,
-            XGB = overperf_xgb,
+            LM = performance_lm,
+            RF = performance_rf,
+            XGB = performance_xgb,
             Weighted = weighted_avg,
             Welo = avg_welo
         )
@@ -256,7 +289,7 @@ plot_scatter_models <- function(df_test_clean, model_df, df_train_clean, serve_n
     metric_names <- c("LM", "RF", "XGB", "Weighted", "Welo")
     
     for (m in metric_names) {
-        df_m <- all_df_std %>%
+        df_m <- all_df %>%
             select(ServerName, actual, metric_score = !!sym(m)) %>%
             mutate(Model = m)
         
@@ -420,3 +453,4 @@ p_heatmap <- ggplot(heatmap_df_long, aes(x = ServeDepth, y = ServeWidth, fill = 
 
 ggsave(file.path(importance_dir, "modal_location_heatmap.png"),
        p_heatmap, width = 7, height = 5, bg = "white")
+
