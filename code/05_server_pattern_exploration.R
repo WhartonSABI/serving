@@ -8,7 +8,7 @@ library(recipes)
 library(pheatmap)
 
 # --- Config ---
-tournament <- "wimbledon"  # "wimbledon" or "usopen"
+tournament <- "usopen"  # "wimbledon" or "usopen"
 gender <- "m"              # "m" or "f"
 tag_prefix <- paste0(tournament, "_", ifelse(gender == "m", "males", "females"))
 
@@ -26,7 +26,7 @@ df_clean <- df %>%
     filter(ServeNumber %in% c(1, 2)) %>%
     mutate(
         location_bin = paste0("W", ServeWidth, "_D", ServeDepth),
-        ServerName = ifelse(ServeIndicator == 1, player1, player2),
+        ServerName = tolower(ifelse(ServeIndicator == 1, player1, player2)),
         is_ace = ifelse(ServeIndicator == 1, P1Ace, P2Ace),
         is_df = ifelse(ServeIndicator == 1, P1DoubleFault, P2DoubleFault)
     )
