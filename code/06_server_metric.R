@@ -311,18 +311,6 @@ ggsave(file.path(output_dir, paste0(tag_prefix, "_SQS_vs_winpct.png")),
 ### compare to baselines' out of sample testing
 ############################
 
-### using simple stats as baseline: ace percentage, and average serve speed
-simple_baseline <- df_test_clean %>%
-  mutate(
-    is_ace = ifelse(ServeIndicator == 1, P1Ace, P2Ace),
-  ) %>%
-  group_by(ServerName) %>%
-  summarise(
-    avg_speed_test  = mean(Speed_MPH, na.rm = TRUE),
-    n_serves_test   = n(),
-    .groups = "drop"
-  )
-
 # welo
 welo_baseline <- df_test_clean %>%
   mutate(
@@ -334,12 +322,11 @@ welo_baseline <- df_test_clean %>%
     .groups = "drop"
   )
 
-# merge baselines with test outcomes
+# merge baseline (welo) with test outcomes
 baseline_eval <- test_outcomes %>%
-  left_join(simple_baseline, by = "ServerName") %>%
   left_join(welo_baseline,  by = "ServerName") %>%
   left_join(sqs_combined %>% select(ServerName, SQS_prob_combined), by = "ServerName") %>% 
-  filter(n_serves_test.x > 20)
+  filter(n_serves_test > 20)
 
 # --- Z-score standardization helper ---
 zscore <- function(x) {
@@ -350,7 +337,6 @@ zscore <- function(x) {
 baseline_eval_std <- baseline_eval %>%
   mutate(
     SQS_prob_combined_z  = zscore(SQS_prob_combined),
-    avg_speed_test_z     = zscore(avg_speed_test),
     welo_mean_test_z     = zscore(welo_mean_test),
     serve_efficiency_z   = zscore(serve_efficiency_test),
     win_pct_z            = zscore(win_pct_test)
@@ -376,8 +362,6 @@ corr_stats <- function(pred, obs, name_pred, name_outcome) {
 metrics_list <- list(
   corr_stats(baseline_eval_std$SQS_prob_combined_z, baseline_eval_std$serve_efficiency_z, "SQS_prob", "serve_efficiency"),
   corr_stats(baseline_eval_std$SQS_prob_combined_z, baseline_eval_std$win_pct_z,          "SQS_prob", "win_pct"),
-  corr_stats(baseline_eval_std$avg_speed_test_z,    baseline_eval_std$serve_efficiency_z, "avg_speed", "serve_efficiency"),
-  corr_stats(baseline_eval_std$avg_speed_test_z,    baseline_eval_std$win_pct_z,          "avg_speed", "win_pct"),
   corr_stats(baseline_eval_std$welo_mean_test_z,    baseline_eval_std$serve_efficiency_z, "welo", "serve_efficiency"),
   corr_stats(baseline_eval_std$welo_mean_test_z,    baseline_eval_std$win_pct_z,          "welo", "win_pct")
 )
@@ -386,3 +370,98 @@ metrics_baselines_std <- bind_rows(metrics_list)
 
 baseline_path <- file.path(output_dir, paste0(tag_prefix, "_baseline_comparison.csv"))
 write_csv(metrics_baselines_std, baseline_path)
+
+#############################
+### test server quality scores separately (first and second serves), compare to speed and welo
+#############################
+
+# --- Helper to evaluate one serve type ---
+eval_by_serve_type <- function(serve_num,
+                               sqs_tbl,                # sqs_first or sqs_second (from training)
+                               tag_label,              # "first" or "second"
+                               out_dir = output_dir) {
+  
+  # Predictions from training metric (probability scale for interpretability)
+  preds <- sqs_tbl %>%
+    transmute(ServerName,
+              SQS_prob = plogis(SQS_logodds))   # convert that type’s SQS to prob
+  
+  # Test outcomes and baselines for this serve type
+  test_type <- df_test_clean %>%
+    filter(ServeNumber == serve_num) %>%
+    mutate(
+      # is_ace     = ifelse(ServeIndicator == 1, P1Ace, P2Ace),  # not used as baseline here, but kept if needed
+      welo_value = ifelse(ServeIndicator == 1, player1_avg_welo, player2_avg_welo)
+    ) %>%
+    group_by(ServerName) %>%
+    summarise(
+      n_serves_test_type   = n(),
+      wins_total_type      = sum(server_won, na.rm = TRUE),
+      wins_rally_le3_type  = sum(server_won * (RallyCount <= 3), na.rm = TRUE),
+      
+      # Outcomes (per serve type)
+      win_pct_type         = wins_total_type / n_serves_test_type,
+      serve_eff_type       = wins_rally_le3_type / n_serves_test_type,
+      
+      # Baselines (per serve type)
+      avg_speed_type       = mean(Speed_MPH, na.rm = TRUE),
+      welo_mean_type       = mean(welo_value, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(n_serves_test_type > 20)
+  
+  # Merge preds with test outcomes & baselines
+  eval_df <- preds %>%
+    inner_join(test_type, by = "ServerName")
+  
+  # Standardize everything before metrics
+  zscore <- function(x) if (is.numeric(x)) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE) else x
+  eval_std <- eval_df %>%
+    mutate(
+      SQS_prob_z      = zscore(SQS_prob),
+      speed_z         = zscore(avg_speed_type),
+      welo_z          = zscore(welo_mean_type),
+      eff_z           = zscore(serve_eff_type),
+      win_z           = zscore(win_pct_type)
+    )
+  
+  # Metrics
+  rmse_fun <- function(pred, obs) sqrt(mean((pred - obs)^2, na.rm = TRUE))
+  corr_stats <- function(pred, obs, name_pred, name_outcome) {
+    keep <- is.finite(pred) & is.finite(obs)
+    if (sum(keep) < 3) {
+      return(tibble(predictor = name_pred, outcome = name_outcome,
+                    n = sum(keep), rmse = NA_real_, cor = NA_real_, p_value = NA_real_))
+    }
+    ct <- suppressWarnings(cor.test(pred[keep], obs[keep], method = "pearson"))
+    tibble(
+      predictor = name_pred, outcome = name_outcome, n = sum(keep),
+      rmse = rmse_fun(pred[keep], obs[keep]),
+      cor  = unname(ct$estimate), p_value = ct$p.value
+    )
+  }
+  
+  metrics <- bind_rows(
+    # vs serve efficiency
+    corr_stats(eval_std$SQS_prob_z, eval_std$eff_z,  paste0("SQS_", tag_label), "serve_efficiency"),
+    corr_stats(eval_std$speed_z,    eval_std$eff_z,  paste0("avg_speed_", tag_label), "serve_efficiency"),
+    corr_stats(eval_std$welo_z,     eval_std$eff_z,  "welo", "serve_efficiency"),
+    
+    # vs win %
+    corr_stats(eval_std$SQS_prob_z, eval_std$win_z,  paste0("SQS_", tag_label), "win_pct"),
+    corr_stats(eval_std$speed_z,    eval_std$win_z,  paste0("avg_speed_", tag_label), "win_pct"),
+    corr_stats(eval_std$welo_z,     eval_std$win_z,  "welo", "win_pct")
+  ) %>%
+    mutate(serve_type = tag_label)
+  
+  # Save
+  out_path <- file.path(out_dir, paste0(tag_prefix, "_oos_metrics_", tag_label, "_serve.csv"))
+  write_csv(metrics, out_path)
+}
+
+# --- Run for first and second serves ---
+metrics_first  <- eval_by_serve_type(serve_num = 1, sqs_tbl = sqs_first,  tag_label = "first")
+metrics_first
+metrics_second <- eval_by_serve_type(serve_num = 2, sqs_tbl = sqs_second, tag_label = "second")
+metrics_second
+
