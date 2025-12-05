@@ -7,6 +7,7 @@ library(factoextra)
 library(recipes)
 library(pheatmap)
 library(lme4)
+library(gridExtra)
 
 # --- Config ---
 tournament <- "usopen"  # "wimbledon" or "usopen"
@@ -17,7 +18,7 @@ tag_prefix <- paste0(tournament, "_", ifelse(gender == "m", "males", "females"))
 training_path <- file.path("../data/processed/scaled", paste0(tournament, "_", gender, "_training.csv"))
 testing_path <- file.path("../data/processed/scaled", paste0(tournament, "_", gender, "_testing.csv"))
 
-output_dir <- file.path("../data/results/", tag_prefix)
+output_dir <- file.path("../data/results", tag_prefix)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
 # --- Load Data ---
@@ -194,6 +195,27 @@ sqs_combined <- full_join(
 # convert to probability scale
 sqs_combined <- sqs_combined %>%
   mutate(SQS_prob_combined = plogis(SQS_logodds_combined))
+
+# arrange by decreasing SQS_prob_combined
+sqs_combined <- sqs_combined %>%
+  arrange(desc(SQS_prob_combined))
+
+# make servername capitalized
+sqs_combined <- sqs_combined %>%
+  mutate(ServerName = str_to_title(ServerName))
+
+path <- file.path(output_dir, paste0(tag_prefix, "_metrics.csv"))
+write.csv(sqs_combined, path)
+
+# save top 25 servers as image for display
+top_n <- 25
+top_sqs <- sqs_combined %>%
+  slice_head(n = top_n) %>%
+  select(ServerName, SQS_prob_combined)
+png(file.path(output_dir, paste0(tag_prefix, "_top_", top_n, "_servers.png")),
+    width = 800, height = 600)
+grid.table(top_sqs)
+dev.off()
 
 ################################
 ### out of sample testing
