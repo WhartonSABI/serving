@@ -7,7 +7,9 @@ library(factoextra)
 library(recipes)
 library(pheatmap)
 library(lme4)
-library(gridExtra)
+# install.packages("webshot2")
+library(kableExtra)
+library(webshot2)
 
 # --- Config ---
 tournament <- "usopen"  # "wimbledon" or "usopen"
